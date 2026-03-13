@@ -428,7 +428,6 @@ function AuthScreen({ onAuth }) {
   const handleSubmit = async () => {
     setLoading(true); setError('');
     if (DEMO_MODE) {
-      // Demo mode — store in localStorage
       const users = storage.get('hcc_users', []);
       if (tab === 'signup') {
         if (!form.email || !form.password || !form.name || !form.org) { setError('Please fill all fields.'); setLoading(false); return; }
@@ -451,6 +450,34 @@ function AuthScreen({ onAuth }) {
         storage.set('hcc_session', user);
         onAuth(user, org);
       }
+      setLoading(false);
+      return;
+    }
+    // Supabase mode
+    try {
+      if (tab === 'signup') {
+        if (!form.email || !form.password || !form.name || !form.org) { setError('Please fill all fields.'); setLoading(false); return; }
+        const { data: authData, error: authErr } = await supabase.auth.signUp({ email: form.email, password: form.password });
+        if (authErr) { setError(authErr.message); setLoading(false); return; }
+        const userId = authData.user.id;
+        const { data: orgData, error: orgErr } = await supabase.from('organizations').insert({ name: form.org, owner_id: userId }).select().single();
+        if (orgErr) { setError(orgErr.message); setLoading(false); return; }
+        const { error: profErr } = await supabase.from('profiles').insert({ id: userId, org_id: orgData.id, name: form.name, email: form.email, role: 'owner' });
+        if (profErr) { setError(profErr.message); setLoading(false); return; }
+        const user = { id: userId, name: form.name, email: form.email, orgId: orgData.id, role: 'owner' };
+        onAuth(user, orgData);
+      } else {
+        const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
+        if (authErr) { setError(authErr.message); setLoading(false); return; }
+        const userId = authData.user.id;
+        const { data: profile, error: profErr } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        if (profErr) { setError('Could not load profile.'); setLoading(false); return; }
+        const { data: org } = await supabase.from('organizations').select('*').eq('id', profile.org_id).single();
+        const user = { id: userId, name: profile.name, email: profile.email, orgId: profile.org_id, role: profile.role };
+        onAuth(user, org);
+      }
+    } catch(e) {
+      setError('Something went wrong: ' + e.message);
     }
     setLoading(false);
   };
