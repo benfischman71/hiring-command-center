@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
 :root {
@@ -413,6 +414,34 @@ function ScoreBtns({ value, onChange }) {
 }
 
 /* ═══════════════════════════════════════
+   PDF / FILE TEXT EXTRACTION HELPER
+   ═══════════════════════════════════════ */
+async function readJDFile(file, callback) {
+  if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    try {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        fullText += textContent.items.map(item => item.str).join(' ') + '
+';
+      }
+      callback(fullText.trim());
+    } catch(e) {
+      callback('Could not extract PDF text. Please paste the JD directly.');
+    }
+  } else {
+    const reader = new FileReader();
+    reader.onload = ev => callback(ev.target.result);
+    reader.readAsText(file);
+  }
+}
+
+/* ═══════════════════════════════════════
    AUTH SCREEN
    ═══════════════════════════════════════ */
 function AuthScreen({ onAuth }) {
@@ -702,9 +731,7 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
                   e.currentTarget.style.borderColor='var(--border)';
                   const file = e.dataTransfer.files[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = ev => update('jd', ev.target.result);
-                  reader.readAsText(file);
+                  readJDFile(file, text => update('jd', text));
                 }}
                 onClick={()=>document.getElementById('jd-file-input').click()}
                 style={{border:'2px dashed var(--border)',borderRadius:10,padding:'24px',
@@ -718,9 +745,7 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
                 onChange={e=>{
                   const file = e.target.files[0];
                   if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = ev => update('jd', ev.target.result);
-                  reader.readAsText(file);
+                  readJDFile(file, text => update('jd', text));
                   e.target.value='';
                 }}/>
               <textarea style={{minHeight:160}} placeholder="...or paste your job description here" value={form.jd} onChange={e=>update('jd',e.target.value)}/>
