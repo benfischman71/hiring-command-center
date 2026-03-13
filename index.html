@@ -692,8 +692,38 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
           </>}
 
           {tab==='jd' && <>
-            <div className="field"><label>Paste Job Description</label>
-              <textarea style={{minHeight:180}} placeholder="Paste the full job description here and we'll extract requirements automatically..." value={form.jd} onChange={e=>update('jd',e.target.value)}/>
+            <div className="field">
+              <label>Upload or Paste Job Description</label>
+              <div
+                onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+                onDragLeave={e=>{e.currentTarget.style.borderColor='var(--border)';}}
+                onDrop={e=>{
+                  e.preventDefault();
+                  e.currentTarget.style.borderColor='var(--border)';
+                  const file = e.dataTransfer.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = ev => update('jd', ev.target.result);
+                  reader.readAsText(file);
+                }}
+                onClick={()=>document.getElementById('jd-file-input').click()}
+                style={{border:'2px dashed var(--border)',borderRadius:10,padding:'24px',
+                  textAlign:'center',cursor:'pointer',marginBottom:12,transition:'border-color .2s',
+                  background:'var(--surface2)'}}>
+                <div style={{fontSize:28,marginBottom:6}}>📄</div>
+                <div style={{fontSize:13,fontWeight:600,color:'var(--text2)'}}>Drop a file here or click to upload</div>
+                <div style={{fontSize:11,color:'var(--muted)',marginTop:4)}}>Supports .txt, .pdf (text), .doc contents</div>
+              </div>
+              <input id="jd-file-input" type="file" accept=".txt,.text,.md,.doc,.docx,.pdf" style={{display:'none'}}
+                onChange={e=>{
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = ev => update('jd', ev.target.result);
+                  reader.readAsText(file);
+                  e.target.value='';
+                }}/>
+              <textarea style={{minHeight:160}} placeholder="...or paste your job description here" value={form.jd} onChange={e=>update('jd',e.target.value)}/>
             </div>
             <button className="btn btn-purple" onClick={extractFromJD} disabled={extracting||!form.jd}>
               {extracting ? '⏳ Extracting...' : '✨ Extract Requirements with AI'}
