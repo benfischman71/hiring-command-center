@@ -1157,7 +1157,7 @@ function JDBuilderView({ positions, setPositions, requirements: reqLib }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-allow-browser': 'true' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-3-5-haiku-20241022',
           max_tokens: 1500,
           messages: [{
             role: 'user',
@@ -1180,7 +1180,8 @@ Return a JSON object with these exact fields (no markdown, no backticks, just ra
         })
       });
       const data = await response.json();
-      const text = data.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim();
+      if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+      const text = data.content[0].text.replace(/```json|```/g,'').trim();
       const parsed = JSON.parse(text);
       setForm(f => ({
         ...f,
@@ -1196,7 +1197,7 @@ Return a JSON object with these exact fields (no markdown, no backticks, just ra
       setMode('manual');
       setStep(1);
     } catch(e) {
-      setAiError('Could not generate JD. Please try again or use manual mode.');
+      setAiError('Error: ' + e.message + '. Please try again or use manual mode.');
     }
     setAiLoading(false);
   };
