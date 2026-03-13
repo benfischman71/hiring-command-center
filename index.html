@@ -473,13 +473,13 @@ function AuthScreen({ onAuth }) {
         orgs.push(org);
         storage.set('hcc_users', users);
         storage.set('hcc_orgs', orgs);
-        storage.set('hcc_session', user);
+        storage.set('hcc_session', {...user, expiresAt: Date.now() + 30*24*60*60*1000});
         onAuth(user, org);
       } else {
         const user = users.find(u => u.email === form.email && u.password === form.password);
         if (!user) { setError('Invalid email or password.'); setLoading(false); return; }
         const org = storage.get('hcc_orgs', []).find(o => o.id === user.orgId);
-        storage.set('hcc_session', user);
+        storage.set('hcc_session', {...user, expiresAt: Date.now() + 30*24*60*60*1000});
         onAuth(user, org);
       }
       setLoading(false);
@@ -1872,10 +1872,34 @@ function App() {
   const setCandidates = (fn) => setCandidatesState(fn);
   const setRequirements = (fn) => setRequirementsState(fn);
 
-  // Check for existing session
+  // Restore Supabase session on load
+  useEffect(()=>{
+    if (!DEMO_MODE && supabase) {
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (session) {
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          if (profile) {
+            const { data: org } = await supabase.from('organizations').select('*').eq('id', profile.org_id).single();
+            const user = { id: session.user.id, name: profile.name, email: profile.email, orgId: profile.org_id, role: profile.role };
+            setUser(user); setOrg(org);
+            const p = localStorage.getItem('hcc_positions_'+profile.org_id);
+            const c = localStorage.getItem('hcc_candidates_'+profile.org_id);
+            const r = localStorage.getItem('hcc_requirements_'+profile.org_id);
+            if (p) setPositionsState(JSON.parse(p));
+            if (c) setCandidatesState(JSON.parse(c));
+            if (r) setRequirementsState(JSON.parse(r));
+          }
+        }
+      });
+    }
+  },[]);
+
+  // Check for existing demo session
   useEffect(()=>{
     const session = storage.get('hcc_session', null);
-    if (session && session.id) {
+    if (session && session.id && (!session.expiresAt || session.expiresAt > Date.now())) {
+      // Refresh expiry on each visit
+      storage.set('hcc_session', {...session, expiresAt: Date.now() + 30*24*60*60*1000});
       const orgData = storage.get('hcc_orgs', []).find(o=>o.id===session.orgId);
       setUser(session);
       setOrg(orgData);
