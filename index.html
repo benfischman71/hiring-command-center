@@ -712,7 +712,7 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
                   background:'var(--surface2)'}}>
                 <div style={{fontSize:28,marginBottom:6}}>📄</div>
                 <div style={{fontSize:13,fontWeight:600,color:'var(--text2)'}}>Drop a file here or click to upload</div>
-                <div style={{fontSize:11,color:'var(--muted)',marginTop:4)}}>Supports .txt, .pdf (text), .doc contents</div>
+                <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>Supports .txt, .pdf (text), .doc contents</div>
               </div>
               <input id="jd-file-input" type="file" accept=".txt,.text,.md,.doc,.docx,.pdf" style={{display:'none'}}
                 onChange={e=>{
@@ -1072,11 +1072,69 @@ function RequirementsView({ requirements, setRequirements }) {
    JD BUILDER
    ═══════════════════════════════════════ */
 function JDBuilderView({ positions, setPositions, requirements: reqLib }) {
+  const [mode, setMode] = useState(''); // 'manual' or 'ai'
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ title:'', department:'', location:'', level:'Mid', description:'', responsibilities:'', qualifications:'', requirements:[] });
   const [generated, setGenerated] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const update = (k,v) => setForm(f=>({...f,[k]:v}));
 
+  // ── AI Generation ──────────────────────────────
+  const generateWithClaude = async () => {
+    if (!aiPrompt.trim()) return;
+    setAiLoading(true); setAiError('');
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1500,
+          messages: [{
+            role: 'user',
+            content: `You are an expert recruiter and talent acquisition specialist. Create a compelling, detailed job description based on the following information:
+
+${aiPrompt}
+
+Return a JSON object with these exact fields (no markdown, no backticks, just raw JSON):
+{
+  "title": "job title",
+  "department": "department name",
+  "location": "location or Remote",
+  "level": "one of: Junior, Mid, Senior, Lead, Director, VP, C-Level",
+  "description": "2-3 sentence role overview",
+  "responsibilities": "bullet points starting with •, one per line, 5-7 items",
+  "qualifications": "bullet points starting with •, one per line, 5-7 items",
+  "requirements": ["requirement 1", "requirement 2", "requirement 3", "requirement 4", "requirement 5"]
+}`
+          }]
+        })
+      });
+      const data = await response.json();
+      const text = data.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim();
+      const parsed = JSON.parse(text);
+      setForm(f => ({
+        ...f,
+        title: parsed.title || f.title,
+        department: parsed.department || f.department,
+        location: parsed.location || f.location,
+        level: parsed.level || f.level,
+        description: parsed.description || f.description,
+        responsibilities: parsed.responsibilities || f.responsibilities,
+        qualifications: parsed.qualifications || f.qualifications,
+        requirements: (parsed.requirements||[]).map(r => ({ id: uid(), name: r, weight: 1, mustHave: false }))
+      }));
+      setMode('manual');
+      setStep(1);
+    } catch(e) {
+      setAiError('Could not generate JD. Please try again or use manual mode.');
+    }
+    setAiLoading(false);
+  };
+
+  // ── Manual generation ──────────────────────────
   const generateJD = () => {
     const jd = `# ${form.title}
 **Department:** ${form.department} | **Location:** ${form.location} | **Level:** ${form.level}
@@ -1103,7 +1161,7 @@ ${form.requirements.map(r=>`• ${r.name}`).join('\n')}`;
     };
     setPositions(ps=>[...ps,newPos]);
     alert(`Position "${form.title}" created!`);
-    setStep(1);
+    setMode(''); setStep(1);
     setForm({ title:'', department:'', location:'', level:'Mid', description:'', responsibilities:'', qualifications:'', requirements:[] });
     setGenerated('');
   };
@@ -1115,10 +1173,79 @@ ${form.requirements.map(r=>`• ${r.name}`).join('\n')}`;
     else setForm(f=>({...f,requirements:[...f.requirements,{id:uid(),name:req.name,weight:1,mustHave:false}]}));
   };
 
+  // ── Mode selector ──────────────────────────────
+  if (!mode) return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">JD Builder</div><div className="page-sub">Create a job description your way</div></div>
+      </div>
+      <div className="grid-2" style={{gap:20,maxWidth:700}}>
+        <div className="card" style={{cursor:'pointer',border:'1px solid var(--border)',transition:'all .2s'}}
+          onClick={()=>setMode('ai')}
+          onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent2)'}
+          onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
+          <div style={{fontSize:36,marginBottom:12}}>✨</div>
+          <div style={{fontSize:17,fontWeight:700,marginBottom:8}}>Let Claude Write It</div>
+          <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.6}}>
+            Tell Claude about the role in plain language — who you need, what they'll do, what matters most. Claude will generate a complete, polished JD instantly.
+          </div>
+          <div className="btn btn-purple mt-4" style={{display:'inline-flex'}}>Use AI →</div>
+        </div>
+        <div className="card" style={{cursor:'pointer',border:'1px solid var(--border)',transition:'all .2s'}}
+          onClick={()=>setMode('manual')}
+          onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent)'}
+          onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}>
+          <div style={{fontSize:36,marginBottom:12}}>📝</div>
+          <div style={{fontSize:17,fontWeight:700,marginBottom:8}}>Build It Yourself</div>
+          <div style={{fontSize:13,color:'var(--muted)',lineHeight:1.6}}>
+            Fill in the details step by step — title, responsibilities, qualifications, and requirements. Full control over every word.
+          </div>
+          <div className="btn btn-secondary mt-4" style={{display:'inline-flex'}}>Manual →</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── AI Mode ────────────────────────────────────
+  if (mode === 'ai') return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">✨ AI JD Builder</div><div className="page-sub">Describe the role and Claude will do the rest</div></div>
+        <button className="btn btn-ghost" onClick={()=>setMode('')}>← Back</button>
+      </div>
+      <div className="card" style={{maxWidth:700}}>
+        <div className="section-title">Tell Claude About This Role</div>
+        <div style={{fontSize:13,color:'var(--muted)',marginBottom:16,lineHeight:1.7}}>
+          Write naturally — like you're explaining the role to a friend. Include the title, what the person will do, what kind of experience you need, and anything else that matters. More detail = better JD.
+        </div>
+        <div className="highlight-box mb-4" style={{fontSize:12,color:'var(--muted)'}}>
+          <strong style={{color:'var(--text2)'}}>Example:</strong> "We need a VP of Marketing for our DTC coffee brand. This person will own the full funnel — paid social, email, influencer, and brand. We're Series A, about 30 people. Need someone who's scaled a DTC brand before, ideally in food & bev. Based in NYC but remote-friendly. They'll manage a team of 4 and report to me."
+        </div>
+        <div className="field">
+          <label>Describe the Role</label>
+          <textarea
+            style={{minHeight:180,fontSize:14,lineHeight:1.7}}
+            placeholder="Tell Claude what you're looking for..."
+            value={aiPrompt}
+            onChange={e=>setAiPrompt(e.target.value)}/>
+        </div>
+        {aiError && <div style={{color:'var(--red)',fontSize:13,marginBottom:12}}>{aiError}</div>}
+        <div className="flex gap-2">
+          <button className="btn btn-purple" onClick={generateWithClaude} disabled={aiLoading||!aiPrompt.trim()}>
+            {aiLoading ? '⏳ Claude is writing your JD...' : '✨ Generate JD with Claude'}
+          </button>
+          <button className="btn btn-ghost" onClick={()=>setMode('')}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Manual Mode ────────────────────────────────
   return (
     <div className="page">
       <div className="page-header">
-        <div><div className="page-title">JD Builder</div><div className="page-sub">Create job descriptions and positions in minutes</div></div>
+        <div><div className="page-title">📝 JD Builder</div><div className="page-sub">Build your job description step by step</div></div>
+        <button className="btn btn-ghost" onClick={()=>setMode('')}>← Back</button>
       </div>
       <div className="flex gap-2 mb-4">
         {['1. Basic Info','2. Requirements','3. Review & Create'].map((s,i)=>(
