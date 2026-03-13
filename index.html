@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hiring Command Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --bg:#090c12; --surface:#111520; --surface2:#181e2e; --surface3:#1f2638;
+  --border:#252d42; --border2:#2e3850;
+  --accent:#4f8ef7; --accent2:#7c5cfc; --accent3:#2dd4a0;
+  --red:#f75c5c; --yellow:#f7c94f; --orange:#f7834f;
+  --text:#e4eaf8; --text2:#a8b3cc; --muted:#5c6882;
+  --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+  --r:10px; --r2:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+
+/* ── AUTH ─────────────────────────────── */
+.auth-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 30% 20%,rgba(79,142,247,.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 70% 80%,rgba(124,92,252,.06) 0%,transparent 60%),var(--bg)}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:44px;width:100%;max-width:440px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
+.auth-brand{font-size:20px;font-weight:700;letter-spacing:-.02em;
+  background:linear-gradient(130deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.auth-tagline{color:var(--muted);font-size:13px;margin-bottom:32px}
+.auth-tabs{display:flex;gap:6px;margin-bottom:28px;background:var(--surface2);padding:4px;border-radius:10px}
+.auth-tab{flex:1;padding:9px;border:none;background:transparent;color:var(--muted);
+  border-radius:7px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;transition:all .2s}
+.auth-tab.active{background:var(--surface3);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+/* ── FORM ─────────────────────────────── */
+.field{margin-bottom:16px}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:6px}
+input,select,textarea{width:100%;background:var(--surface2);border:1.5px solid var(--border);
+  border-radius:var(--r);padding:10px 13px;color:var(--text);font-family:var(--font);
+  font-size:14px;outline:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+textarea{resize:vertical;min-height:90px}
+select option{background:var(--surface2)}
+.error-msg{color:var(--red);font-size:12px;margin-top:28px;text-align:center}
+
+/* ── BUTTONS ──────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--r);
+  border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .15s;white-space:nowrap;line-height:1}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#3a7de8;transform:translateY(-1px)}
+.btn-purple{background:var(--accent2);color:#fff}
+.btn-purple:hover{background:#6a4de8}
+.btn-green{background:var(--accent3);color:#0a1a12}
+.btn-green:hover{background:#24b88a}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:rgba(247,92,92,.15);color:var(--red);border:1px solid rgba(247,92,92,.3)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid transparent}
+.btn-ghost:hover{color:var(--text);background:var(--surface2)}
+.btn-sm{padding:6px 13px;font-size:12px}
+.btn-xs{padding:4px 10px;font-size:11px}
+.btn-full{width:100%;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+/* ── LAYOUT ───────────────────────────── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto;padding:20px 0}
+.sidebar-brand{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.sidebar-brand-name{font-size:16px;font-weight:700;letter-spacing:-.02em;
+  background:linear-gradient(130deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sidebar-org{font-size:11px;color:var(--muted);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-section{padding:0 12px;margin-bottom:4px}
+.nav-section-label{font-size:10px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;padding:8px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;
+  cursor:pointer;transition:all .15s;color:var(--text2);font-size:13px;font-weight:500;
+  text-decoration:none;border:none;background:none;width:100%;font-family:var(--font)}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(79,142,247,.12);color:var(--accent);font-weight:600}
+.nav-item .nav-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)}
+.user-pill{display:flex;align-items:center;gap:10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+.user-info{overflow:hidden}
+.user-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:11px;color:var(--muted)}
+.main{flex:1;overflow-y:auto;background:var(--bg)}
+.page{padding:32px;max-width:1200px}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px}
+.page-title{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.page-sub{color:var(--muted);font-size:13px;margin-top:3px}
+
+/* ── CARDS ────────────────────────────── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:20px}
+.card-sm{padding:14px}
+
+/* ── STATS ────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px}
+.stat-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+.stat-value{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.stat-value.blue{color:var(--accent)}
+.stat-value.purple{color:var(--accent2)}
+.stat-value.green{color:var(--accent3)}
+.stat-value.yellow{color:var(--yellow)}
+
+/* ── TABLE ────────────────────────────── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)}
+td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* ── BADGES ───────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;
+  font-size:11px;font-weight:600;letter-spacing:.02em}
+.badge-blue{background:rgba(79,142,247,.15);color:var(--accent)}
+.badge-purple{background:rgba(124,92,252,.15);color:var(--accent2)}
+.badge-green{background:rgba(45,212,160,.15);color:var(--accent3)}
+.badge-red{background:rgba(247,92,92,.15);color:var(--red)}
+.badge-yellow{background:rgba(247,201,79,.15);color:var(--yellow)}
+.badge-gray{background:var(--surface2);color:var(--text2)}
+
+/* ── MODAL ────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;
+  align-items:center;justify-content:center;z-index:1000;padding:20px;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.6)}
+.modal-lg{max-width:780px}
+.modal-header{padding:24px 28px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:18px;font-weight:700;letter-spacing:-.02em}
+.modal-body{padding:24px 28px 28px}
+.modal-close{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  color:var(--muted);cursor:pointer;font-size:18px;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.modal-close:hover{color:var(--text)}
+.modal-footer{padding:0 28px 28px;display:flex;gap:10px;justify-content:flex-end}
+
+/* ── SCORE BAR ────────────────────────── */
+.score-bar-wrap{display:flex;align-items:center;gap:10px}
+.score-bar-bg{flex:1;height:6px;background:var(--surface3);border-radius:99px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:99px;transition:width .4s}
+.score-num{font-size:13px;font-weight:700;font-family:var(--mono);min-width:36px;text-align:right}
+
+/* ── SCORE BUTTONS (1-5) ──────────────── */
+.score-btns{display:flex;gap:5px}
+.score-btn{width:36px;height:36px;border-radius:8px;border:1.5px solid var(--border);
+  background:var(--surface2);color:var(--muted);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;font-family:var(--font)}
+.score-btn:hover{border-color:var(--accent);color:var(--accent)}
+.score-btn.active-1{border-color:var(--red);background:rgba(247,92,92,.15);color:var(--red)}
+.score-btn.active-2{border-color:var(--orange);background:rgba(247,131,79,.15);color:var(--orange)}
+.score-btn.active-3{border-color:var(--yellow);background:rgba(247,201,79,.15);color:var(--yellow)}
+.score-btn.active-4{border-color:var(--accent3);background:rgba(45,212,160,.12);color:var(--accent3)}
+.score-btn.active-5{border-color:var(--accent);background:rgba(79,142,247,.15);color:var(--accent)}
+
+/* ── PIPELINE ─────────────────────────── */
+.pipeline{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
+.pipeline-col{min-width:200px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r2);padding:14px}
+.pipeline-col-header{font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted);margin-bottom:12px;display:flex;
+  align-items:center;justify-content:space-between}
+.pipeline-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:12px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.pipeline-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.pipeline-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.pipeline-pos{font-size:12px;color:var(--muted)}
+
+/* ── TABS ─────────────────────────────── */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:24px}
+.tab{padding:10px 16px;border:none;background:none;color:var(--muted);
+  font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ── REQUIREMENT ROW ──────────────────── */
+.req-row{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.req-name{flex:1;font-size:13px;font-weight:500}
+.req-category{font-size:11px;color:var(--muted)}
+.weight-select{background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:4px 8px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer}
+.must-toggle{width:20px;height:20px;border-radius:4px;border:1.5px solid var(--border);
+  background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:12px;transition:all .2s}
+.must-toggle.on{border-color:var(--red);background:rgba(247,92,92,.15);color:var(--red)}
+
+/* ── NOTES TIMER ──────────────────────── */
+.timer-display{font-family:var(--mono);font-size:28px;font-weight:500;color:var(--accent);letter-spacing:.05em}
+.note-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.note-time{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:50px;padding-top:2px}
+.note-text{font-size:13px;flex:1}
+.note-star{color:var(--yellow)}
+
+/* ── SHARE CODE ───────────────────────── */
+.share-code-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:16px 20px;display:flex;align-items:center;gap:12px}
+.share-code{font-family:var(--mono);font-size:20px;font-weight:500;letter-spacing:.1em;color:var(--accent);flex:1}
+
+/* ── COMPARISON ───────────────────────── */
+.compare-table{width:100%;border-collapse:collapse}
+.compare-table th,.compare-table td{padding:12px 16px;border:1px solid var(--border);text-align:left}
+.compare-table th{background:var(--surface2);font-size:12px;font-weight:700;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.compare-table .req-col{font-size:13px;font-weight:500}
+.compare-table .score-cell{text-align:center}
+
+/* ── REF CHECK ────────────────────────── */
+.ref-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:10px}
+.ref-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ref-name{font-size:14px;font-weight:600}
+.ref-meta{font-size:12px;color:var(--muted)}
+
+/* ── EXTERNAL SCORER ──────────────────── */
+.external-bg{min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.external-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:620px}
+
+/* ── MISC ─────────────────────────────── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.empty-sub{font-size:13px;margin-bottom:20px}
+.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.flex{display:flex}.flex-col{flex-direction:column}.items-center{align-items:center}
+.justify-between{justify-content:space-between}.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+.mt-1{margin-top:4px}.mt-2{margin-top:8px}.mt-3{margin-top:12px}.mt-4{margin-top:16px}
+.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}
+.text-muted{color:var(--muted)}.text-sm{font-size:12px}.text-xs{font-size:11px}
+.font-bold{font-weight:700}.font-mono{font-family:var(--mono)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;
+  background:var(--surface2);border:1px solid var(--border);font-size:12px;color:var(--text2)}
+.chip-remove{cursor:pointer;color:var(--muted);font-size:14px;line-height:1}
+.chip-remove:hover{color:var(--red)}
+.section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--muted);margin-bottom:12px}
+.info-row{display:flex;gap:6px;align-items:baseline;margin-bottom:6px}
+.info-key{font-size:12px;color:var(--muted);min-width:120px}
+.info-val{font-size:13px;font-weight:500}
+.highlight-box{background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.2);
+  border-radius:10px;padding:14px 16px}
+.pulse{animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ═══════════════════════════════════════
+   CONFIG  — replace with your Supabase credentials
+   ═══════════════════════════════════════ */
+const SUPABASE_URL = 'https://your-project.supabase.co';
+const SUPABASE_ANON_KEY = 'your-anon-key-here';
+const DEMO_MODE = true;   // ← set to false after adding Supabase credentials
+
+/* ═══════════════════════════════════════
+   SUPABASE CLIENT
+   ═══════════════════════════════════════ */
+let supabase = null;
+if (!DEMO_MODE && window.supabase) {
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}
+
+/* ═══════════════════════════════════════
+   DEMO STORAGE (localStorage)
+   ═══════════════════════════════════════ */
+const storage = {
+  get: (k, def=[]) => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):def; } catch{ return def; } },
+  set: (k,v) => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} },
+};
+
+/* ═══════════════════════════════════════
+   DEFAULT REQUIREMENTS LIBRARY
+   ═══════════════════════════════════════ */
+const DEFAULT_REQUIREMENTS = [
+  { id:'r1', category:'Experience', name:'3+ years in similar role' },
+  { id:'r2', category:'Experience', name:'Early stage company experience' },
+  { id:'r3', category:'Experience', name:'Direct-to-consumer (DTC) experience' },
+  { id:'r4', category:'Experience', name:'E-commerce background' },
+  { id:'r5', category:'Experience', name:'Series A/B startup experience' },
+  { id:'r6', category:'Leadership', name:'Managed teams of 5+' },
+  { id:'r7', category:'Leadership', name:'Cross-functional leadership' },
+  { id:'r8', category:'Leadership', name:'Board presentation experience' },
+  { id:'r9', category:'Leadership', name:'Hired and scaled teams' },
+  { id:'r10', category:'Technical', name:'Financial modeling proficiency' },
+  { id:'r11', category:'Technical', name:'FP&A experience' },
+  { id:'r12', category:'Technical', name:'CAC/LTV metrics experience' },
+  { id:'r13', category:'Technical', name:'Marketing attribution expertise' },
+  { id:'r14', category:'Technical', name:'SQL / data analysis' },
+  { id:'r15', category:'Culture', name:'Mission-driven / values alignment' },
+  { id:'r16', category:'Culture', name:'Collaborative working style' },
+  { id:'r17', category:'Culture', name:'High ownership mentality' },
+];
+
+/* ═══════════════════════════════════════
+   HELPERS
+   ═══════════════════════════════════════ */
+const uid = () => Math.random().toString(36).slice(2,10);
+const today = () => new Date().toISOString().split('T')[0];
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+const scoreLabel = s => ['','Does Not Meet','Below Expectations','Meets Expectations','Exceeds Expectations','Far Exceeds'][s]||'';
+const scoreColor = s => ['','#f75c5c','#f7834f','#f7c94f','#2dd4a0','#4f8ef7'][s]||'#fff';
+
+const STAGES = ['Applied','Screening','Interview','Final Round','Offer','Hired','Rejected'];
+const STAGE_COLORS = {Applied:'badge-gray',Screening:'badge-blue',Interview:'badge-purple',
+  'Final Round':'badge-yellow','Offer':'badge-green',Hired:'badge-green',Rejected:'badge-red'};
+
+function calcWeightedScore(scores, requirements) {
+  // scores = {reqId: {score, weight}} or position requirements have weight
+  let total=0, max=0;
+  requirements.forEach(req => {
+    const s = scores[req.id];
+    if (s && s.score) {
+      const w = req.weight || 1;
+      total += s.score * w;
+      max += 5 * w;
+    }
+  });
+  if (max===0) return null;
+  return Math.round((total/max)*100);
+}
+
+/* ═══════════════════════════════════════
+   AI REQUIREMENT EXTRACTION (simulated)
+   ═══════════════════════════════════════ */
+function extractRequirementsFromJD(jdText) {
+  const text = jdText.toLowerCase();
+  const matches = [];
+  const checks = [
+    ['experience','3+ years in similar role'],
+    ['early stage','Early stage company experience'],
+    ['dtc','Direct-to-consumer (DTC) experience'],
+    ['direct-to-consumer','Direct-to-consumer (DTC) experience'],
+    ['ecommerce','E-commerce background'],
+    ['e-commerce','E-commerce background'],
+    ['team','Managed teams of 5+'],
+    ['leadership','Cross-functional leadership'],
+    ['board','Board presentation experience'],
+    ['financial model','Financial modeling proficiency'],
+    ["fp&a",'FP&A experience'],
+    ['cac','CAC/LTV metrics experience'],
+    ['ltv','CAC/LTV metrics experience'],
+    ['sql','SQL / data analysis'],
+    ['data','SQL / data analysis'],
+    ['startup','Series A/B startup experience'],
+    ['series a','Series A/B startup experience'],
+  ];
+  const seen = new Set();
+  checks.forEach(([keyword, req]) => {
+    if (text.includes(keyword) && !seen.has(req)) {
+      seen.add(req);
+      matches.push({ id: uid(), name: req, weight: 1, mustHave: false, custom: false });
+    }
+  });
+  return matches;
+}
+
+/* ═══════════════════════════════════════
+   SCORE BAR COMPONENT
+   ═══════════════════════════════════════ */
+function ScoreBar({ score, max=100 }) {
+  const pct = score ? Math.round((score/max)*100) : 0;
+  const color = pct >= 80 ? 'var(--accent3)' : pct >= 60 ? 'var(--accent)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
+  return (
+    <div className="score-bar-wrap">
+      <div className="score-bar-bg">
+        <div className="score-bar-fill" style={{width:`${pct}%`,background:color}}/>
+      </div>
+      <div className="score-num" style={{color}}>{score!=null?`${pct}%`:'—'}</div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCORE BUTTONS (1-5)
+   ═══════════════════════════════════════ */
+function ScoreBtns({ value, onChange }) {
+  return (
+    <div className="score-btns">
+      {[1,2,3,4,5].map(n => (
+        <button key={n}
+          className={`score-btn ${value===n?`active-${n}`:''}`}
+          onClick={() => onChange(n)}
+          title={scoreLabel(n)}>
+          {n}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   AUTH SCREEN
+   ═══════════════════════════════════════ */
+function AuthScreen({ onAuth }) {
+  const [tab, setTab] = useState('signup');
+  const [form, setForm] = useState({ email:'', password:'', name:'', org:'' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const update = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const handleSubmit = async () => {
+    setLoading(true); setError('');
+    if (DEMO_MODE) {
+      // Demo mode — store in localStorage
+      const users = storage.get('hcc_users', []);
+      if (tab === 'signup') {
+        if (!form.email || !form.password || !form.name || !form.org) { setError('Please fill all fields.'); setLoading(false); return; }
+        const exists = users.find(u => u.email === form.email);
+        if (exists) { setError('Email already registered.'); setLoading(false); return; }
+        const org = { id: uid(), name: form.org, ownerId: '', createdAt: today() };
+        const user = { id: uid(), email: form.email, password: form.password, name: form.name, orgId: org.id, role: 'owner' };
+        org.ownerId = user.id;
+        users.push(user);
+        const orgs = storage.get('hcc_orgs', []);
+        orgs.push(org);
+        storage.set('hcc_users', users);
+        storage.set('hcc_orgs', orgs);
+        storage.set('hcc_session', user);
+        onAuth(user, org);
+      } else {
+        const user = users.find(u => u.email === form.email && u.password === form.password);
+        if (!user) { setError('Invalid email or password.'); setLoading(false); return; }
+        const org = storage.get('hcc_orgs', []).find(o => o.id === user.orgId);
+        storage.set('hcc_session', user);
+        onAuth(user, org);
+      }
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="auth-bg">
+      <div className="auth-card">
+        <div className="auth-brand">Hiring Command Center</div>
+        <div className="auth-tagline">Your end-to-end hiring platform</div>
+        {DEMO_MODE && (
+          <div className="highlight-box mb-4" style={{fontSize:12,color:'var(--accent)'}}>
+            🔵 Running in Demo Mode — data saved to this browser
+          </div>
+        )}
+        <div className="auth-tabs">
+          <button className={`auth-tab ${tab==='signup'?'active':''}`} onClick={()=>setTab('signup')}>Create Account</button>
+          <button className={`auth-tab ${tab==='signin'?'active':''}`} onClick={()=>setTab('signin')}>Sign In</button>
+        </div>
+        {tab === 'signup' && <>
+          <div className="field"><label>Your Name</label><input placeholder="Ben Fischman" value={form.name} onChange={e=>update('name',e.target.value)}/></div>
+          <div className="field"><label>Company / Organization</label><input placeholder="Your Company" value={form.org} onChange={e=>update('org',e.target.value)}/></div>
+        </>}
+        <div className="field"><label>Email</label><input type="email" placeholder="you@company.com" value={form.email} onChange={e=>update('email',e.target.value)}/></div>
+        <div className="field"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={e=>update('password',e.target.value)}/></div>
+        {error && <div className="error-msg">{error}</div>}
+        <button className="btn btn-primary btn-full mt-4" onClick={handleSubmit} disabled={loading}>
+          {loading ? 'Please wait...' : tab==='signup' ? 'Create Account & Org' : 'Sign In'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════ */
+function Dashboard({ user, org, positions, candidates }) {
+  const open = positions.filter(p=>p.status==='Open').length;
+  const total = candidates.length;
+  const active = candidates.filter(c=>!['Hired','Rejected'].includes(c.stage)).length;
+  const hired = candidates.filter(c=>c.stage==='Hired').length;
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Good to see you, {user.name.split(' ')[0]} 👋</div>
+          <div className="page-sub">{org?.name} · Hiring Dashboard</div>
+        </div>
+      </div>
+      <div className="stats-grid">
+        <div className="stat-card"><div className="stat-label">Open Positions</div><div className="stat-value blue">{open}</div></div>
+        <div className="stat-card"><div className="stat-label">Total Candidates</div><div className="stat-value purple">{total}</div></div>
+        <div className="stat-card"><div className="stat-label">Active Pipeline</div><div className="stat-value yellow">{active}</div></div>
+        <div className="stat-card"><div className="stat-label">Hired</div><div className="stat-value green">{hired}</div></div>
+      </div>
+      <div className="grid-2" style={{gap:20}}>
+        <div className="card">
+          <div className="section-title">Open Positions</div>
+          {positions.filter(p=>p.status==='Open').length===0 && <div className="text-muted text-sm">No open positions yet.</div>}
+          {positions.filter(p=>p.status==='Open').slice(0,5).map(p=>(
+            <div key={p.id} className="flex items-center justify-between" style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+              <div>
+                <div style={{fontWeight:600,fontSize:13}}>{p.title}</div>
+                <div className="text-muted text-xs mt-1">{p.department} · {candidates.filter(c=>c.positionId===p.id).length} candidates</div>
+              </div>
+              <span className="badge badge-green">Open</span>
+            </div>
+          ))}
+        </div>
+        <div className="card">
+          <div className="section-title">Recent Candidates</div>
+          {candidates.length===0 && <div className="text-muted text-sm">No candidates yet.</div>}
+          {candidates.slice(-5).reverse().map(c=>{
+            const pos = positions.find(p=>p.id===c.positionId);
+            return (
+              <div key={c.id} className="flex items-center justify-between" style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:13}}>{c.name}</div>
+                  <div className="text-muted text-xs mt-1">{pos?.title||'—'}</div>
+                </div>
+                <span className={`badge ${STAGE_COLORS[c.stage]||'badge-gray'}`}>{c.stage}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   POSITIONS
+   ═══════════════════════════════════════ */
+function PositionsView({ positions, setPositions, requirements: reqLib, candidates }) {
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Positions</div>
+          <div className="page-sub">{positions.length} total · {positions.filter(p=>p.status==='Open').length} open</div>
+        </div>
+        <button className="btn btn-primary" onClick={()=>{setEditing(null);setShowModal(true)}}>+ New Position</button>
+      </div>
+
+      {positions.length===0
+        ? <div className="empty-state"><div className="empty-icon">📋</div><div className="empty-title">No positions yet</div><div className="empty-sub">Create your first position to start hiring.</div></div>
+        : <div className="card" style={{padding:0}}>
+            <div className="table-wrap"><table>
+              <thead><tr>
+                <th>Position</th><th>Department</th><th>Candidates</th><th>Requirements</th><th>Status</th><th></th>
+              </tr></thead>
+              <tbody>
+                {positions.map(p=>(
+                  <tr key={p.id}>
+                    <td><div style={{fontWeight:600}}>{p.title}</div><div className="text-xs text-muted mt-1">{p.location||'Remote'}</div></td>
+                    <td>{p.department||'—'}</td>
+                    <td>{candidates.filter(c=>c.positionId===p.id).length}</td>
+                    <td>{p.requirements?.length||0} criteria</td>
+                    <td><span className={`badge ${p.status==='Open'?'badge-green':'badge-gray'}`}>{p.status}</span></td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button className="btn btn-ghost btn-sm" onClick={()=>{setEditing(p);setShowModal(true)}}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={()=>setPositions(ps=>ps.filter(x=>x.id!==p.id))}>Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table></div>
+          </div>
+      }
+      {showModal && <PositionModal
+        position={editing}
+        reqLib={reqLib}
+        onSave={p=>{
+          if (editing) setPositions(ps=>ps.map(x=>x.id===p.id?p:x));
+          else setPositions(ps=>[...ps,{...p,id:uid(),createdAt:today(),status:'Open'}]);
+          setShowModal(false);
+        }}
+        onClose={()=>setShowModal(false)}
+      />}
+    </div>
+  );
+}
+
+function PositionModal({ position, reqLib, onSave, onClose }) {
+  const [form, setForm] = useState(position || { title:'', department:'', location:'', jd:'', requirements:[], status:'Open' });
+  const [jdInput, setJdInput] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [customReq, setCustomReq] = useState('');
+  const [tab, setTab] = useState('details');
+  const update = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const extractFromJD = () => {
+    setExtracting(true);
+    setTimeout(() => {
+      const extracted = extractRequirementsFromJD(jdInput || form.jd);
+      const existing = form.requirements.map(r=>r.name);
+      const newOnes = extracted.filter(r=>!existing.includes(r.name));
+      setForm(f=>({...f, jd: jdInput||f.jd, requirements:[...f.requirements,...newOnes]}));
+      setExtracting(false);
+    }, 800);
+  };
+
+  const addFromLib = (req) => {
+    if (form.requirements.find(r=>r.name===req.name)) return;
+    setForm(f=>({...f, requirements:[...f.requirements,{id:uid(),name:req.name,weight:1,mustHave:false}]}));
+  };
+
+  const addCustom = () => {
+    if (!customReq.trim()) return;
+    setForm(f=>({...f, requirements:[...f.requirements,{id:uid(),name:customReq.trim(),weight:1,mustHave:false}]}));
+    setCustomReq('');
+  };
+
+  const updateReq = (id, key, val) => setForm(f=>({...f, requirements:f.requirements.map(r=>r.id===id?{...r,[key]:val}:r)}));
+  const removeReq = id => setForm(f=>({...f, requirements:f.requirements.filter(r=>r.id!==id)}));
+
+  const categories = [...new Set(reqLib.map(r=>r.category))];
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal modal-lg">
+        <div className="modal-header">
+          <div className="modal-title">{position?'Edit Position':'New Position'}</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="tabs" style={{marginBottom:20}}>
+            {['details','jd','requirements'].map(t=>(
+              <button key={t} className={`tab ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+                {t==='details'?'Details':t==='jd'?'Job Description':'Requirements'}
+              </button>
+            ))}
+          </div>
+
+          {tab==='details' && <>
+            <div className="grid-2">
+              <div className="field"><label>Job Title *</label><input placeholder="VP of Marketing" value={form.title} onChange={e=>update('title',e.target.value)}/></div>
+              <div className="field"><label>Department</label><input placeholder="Marketing" value={form.department||''} onChange={e=>update('department',e.target.value)}/></div>
+            </div>
+            <div className="grid-2">
+              <div className="field"><label>Location</label><input placeholder="Remote / NYC" value={form.location||''} onChange={e=>update('location',e.target.value)}/></div>
+              <div className="field"><label>Status</label>
+                <select value={form.status} onChange={e=>update('status',e.target.value)}>
+                  <option>Open</option><option>Paused</option><option>Closed</option>
+                </select>
+              </div>
+            </div>
+            <div className="field"><label>Notes</label><textarea placeholder="Internal notes about this role..." value={form.notes||''} onChange={e=>update('notes',e.target.value)}/></div>
+          </>}
+
+          {tab==='jd' && <>
+            <div className="field"><label>Paste Job Description</label>
+              <textarea style={{minHeight:180}} placeholder="Paste the full job description here and we'll extract requirements automatically..." value={form.jd} onChange={e=>update('jd',e.target.value)}/>
+            </div>
+            <button className="btn btn-purple" onClick={extractFromJD} disabled={extracting||!form.jd}>
+              {extracting ? '⏳ Extracting...' : '✨ Extract Requirements with AI'}
+            </button>
+          </>}
+
+          {tab==='requirements' && <>
+            <div className="section-title">Position Requirements ({form.requirements.length})</div>
+            {form.requirements.length===0 && <div className="text-muted text-sm mb-3">No requirements added yet. Add from library or create custom.</div>}
+            {form.requirements.map(req=>(
+              <div key={req.id} className="req-row">
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:500}}>{req.name}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select className="weight-select" value={req.weight} onChange={e=>updateReq(req.id,'weight',Number(e.target.value))}>
+                    <option value={1}>1× weight</option>
+                    <option value={2}>2× weight</option>
+                    <option value={3}>3× weight</option>
+                  </select>
+                  <button className={`must-toggle ${req.mustHave?'on':''}`} onClick={()=>updateReq(req.id,'mustHave',!req.mustHave)} title={req.mustHave?'Must Have (click to remove)':'Set as Must Have'}>
+                    {req.mustHave?'🚫':'○'}
+                  </button>
+                  <button className="btn btn-ghost btn-xs" onClick={()=>removeReq(req.id)}>✕</button>
+                </div>
+              </div>
+            ))}
+            <hr className="divider"/>
+            <div className="section-title">Add Custom Requirement</div>
+            <div className="flex gap-2 mb-4">
+              <input placeholder="e.g. International market experience" value={customReq} onChange={e=>setCustomReq(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addCustom()}/>
+              <button className="btn btn-secondary" onClick={addCustom}>Add</button>
+            </div>
+            <div className="section-title">Add from Library</div>
+            {categories.map(cat=>(
+              <div key={cat} className="mb-3">
+                <div style={{fontSize:12,fontWeight:600,color:'var(--muted)',marginBottom:6}}>{cat}</div>
+                <div className="flex" style={{flexWrap:'wrap',gap:6}}>
+                  {reqLib.filter(r=>r.category===cat).map(r=>{
+                    const added = form.requirements.find(x=>x.name===r.name);
+                    return <button key={r.id} className={`chip ${added?'':'chip-add'}`} style={added?{borderColor:'var(--accent)',color:'var(--accent)'}:{}} onClick={()=>addFromLib(r)}>
+                      {added?'✓ ':''}{r.name}
+                    </button>;
+                  })}
+                </div>
+              </div>
+            ))}
+          </>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={()=>form.title&&onSave(form)} disabled={!form.title}>
+            {position?'Save Changes':'Create Position'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   CANDIDATES
+   ═══════════════════════════════════════ */
+function CandidatesView({ candidates, setCandidates, positions }) {
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [filterPos, setFilterPos] = useState('all');
+  const [filterStage, setFilterStage] = useState('all');
+
+  const filtered = candidates.filter(c=>
+    (filterPos==='all'||c.positionId===filterPos) &&
+    (filterStage==='all'||c.stage===filterStage)
+  );
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Candidates</div>
+          <div className="page-sub">{filtered.length} showing</div>
+        </div>
+        <button className="btn btn-primary" onClick={()=>{setEditing(null);setShowModal(true)}}>+ Add Candidate</button>
+      </div>
+      <div className="flex gap-2 mb-4">
+        <select value={filterPos} onChange={e=>setFilterPos(e.target.value)} style={{maxWidth:220}}>
+          <option value="all">All Positions</option>
+          {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+        </select>
+        <select value={filterStage} onChange={e=>setFilterStage(e.target.value)} style={{maxWidth:180}}>
+          <option value="all">All Stages</option>
+          {STAGES.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      {filtered.length===0
+        ? <div className="empty-state"><div className="empty-icon">👤</div><div className="empty-title">No candidates yet</div><div className="empty-sub">Add candidates to start evaluating.</div></div>
+        : <div className="card" style={{padding:0}}>
+            <div className="table-wrap"><table>
+              <thead><tr><th>Name</th><th>Position</th><th>Stage</th><th>Score</th><th>Added</th><th></th></tr></thead>
+              <tbody>
+                {filtered.map(c=>{
+                  const pos = positions.find(p=>p.id===c.positionId);
+                  const score = pos && c.scores ? calcWeightedScore(c.scores, pos.requirements||[]) : null;
+                  return <tr key={c.id}>
+                    <td><div style={{fontWeight:600}}>{c.name}</div><div className="text-xs text-muted">{c.email||''}</div></td>
+                    <td>{pos?.title||'—'}</td>
+                    <td><span className={`badge ${STAGE_COLORS[c.stage]||'badge-gray'}`}>{c.stage}</span></td>
+                    <td style={{minWidth:140}}><ScoreBar score={score}/></td>
+                    <td className="text-muted">{fmtDate(c.createdAt)}</td>
+                    <td>
+                      <div className="flex gap-2">
+                        <button className="btn btn-ghost btn-sm" onClick={()=>{setEditing(c);setShowModal(true)}}>Edit</button>
+                        <button className="btn btn-danger btn-sm" onClick={()=>setCandidates(cs=>cs.filter(x=>x.id!==c.id))}>✕</button>
+                      </div>
+                    </td>
+                  </tr>;
+                })}
+              </tbody>
+            </table></div>
+          </div>
+      }
+      {showModal && <CandidateModal
+        candidate={editing}
+        positions={positions}
+        onSave={c=>{
+          if(editing) setCandidates(cs=>cs.map(x=>x.id===c.id?c:x));
+          else setCandidates(cs=>[...cs,{...c,id:uid(),createdAt:today(),scores:{}}]);
+          setShowModal(false);
+        }}
+        onClose={()=>setShowModal(false)}
+      />}
+    </div>
+  );
+}
+
+function CandidateModal({ candidate, positions, onSave, onClose }) {
+  const [form, setForm] = useState(candidate || { name:'', email:'', phone:'', positionId:'', stage:'Applied', linkedIn:'', notes:'' });
+  const update = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><div className="modal-title">{candidate?'Edit Candidate':'Add Candidate'}</div><button className="modal-close" onClick={onClose}>×</button></div>
+        <div className="modal-body">
+          <div className="grid-2">
+            <div className="field"><label>Full Name *</label><input placeholder="Jane Smith" value={form.name} onChange={e=>update('name',e.target.value)}/></div>
+            <div className="field"><label>Email</label><input placeholder="jane@email.com" value={form.email||''} onChange={e=>update('email',e.target.value)}/></div>
+          </div>
+          <div className="grid-2">
+            <div className="field"><label>Position *</label>
+              <select value={form.positionId} onChange={e=>update('positionId',e.target.value)}>
+                <option value="">Select position...</option>
+                {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Pipeline Stage</label>
+              <select value={form.stage} onChange={e=>update('stage',e.target.value)}>
+                {STAGES.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="field"><label>Phone</label><input placeholder="+1 (555) 000-0000" value={form.phone||''} onChange={e=>update('phone',e.target.value)}/></div>
+            <div className="field"><label>LinkedIn URL</label><input placeholder="linkedin.com/in/..." value={form.linkedIn||''} onChange={e=>update('linkedIn',e.target.value)}/></div>
+          </div>
+          <div className="field"><label>Notes</label><textarea placeholder="Initial impressions, source, etc." value={form.notes||''} onChange={e=>update('notes',e.target.value)}/></div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={()=>form.name&&form.positionId&&onSave(form)} disabled={!form.name||!form.positionId}>
+            {candidate?'Save Changes':'Add Candidate'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   SCORECARDS
+   ═══════════════════════════════════════ */
+function ScorecardsView({ candidates, setCandidates, positions }) {
+  const [selPos, setSelPos] = useState('');
+  const [selCand, setSelCand] = useState('');
+
+  const pos = positions.find(p=>p.id===selPos);
+  const cand = candidates.find(c=>c.id===selCand);
+  const posForCand = pos || (cand ? positions.find(p=>p.id===cand.positionId) : null);
+
+  const candsByPos = selPos ? candidates.filter(c=>c.positionId===selPos) : candidates;
+
+  const setScore = (reqId, field, val) => {
+    setCandidates(cs => cs.map(c => {
+      if (c.id !== selCand) return c;
+      return { ...c, scores: { ...c.scores, [reqId]: { ...(c.scores||{})[reqId], [field]: val } } };
+    }));
+  };
+
+  const overallScore = posForCand && cand?.scores ? calcWeightedScore(cand.scores, posForCand.requirements||[]) : null;
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Scorecards</div><div className="page-sub">Rate candidates against position requirements</div></div>
+      </div>
+      <div className="grid-2 mb-4">
+        <div className="field" style={{margin:0}}>
+          <label>Position</label>
+          <select value={selPos} onChange={e=>{setSelPos(e.target.value);setSelCand('')}}>
+            <option value="">All Positions</option>
+            {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+          </select>
+        </div>
+        <div className="field" style={{margin:0}}>
+          <label>Candidate</label>
+          <select value={selCand} onChange={e=>setSelCand(e.target.value)}>
+            <option value="">Select Candidate...</option>
+            {candsByPos.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {!selCand && <div className="empty-state"><div className="empty-icon">📊</div><div className="empty-title">Select a candidate to score</div></div>}
+
+      {selCand && cand && posForCand && <>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div style={{fontWeight:700,fontSize:18}}>{cand.name}</div>
+            <div className="text-muted text-sm">{posForCand.title} · {cand.stage}</div>
+          </div>
+          <div style={{textAlign:'right'}}>
+            <div className="text-muted text-xs mb-1">Overall Score</div>
+            <div style={{fontSize:28,fontWeight:700,color:overallScore>=80?'var(--accent3)':overallScore>=60?'var(--accent)':overallScore?'var(--yellow)':'var(--muted)'}}>
+              {overallScore!=null?`${overallScore}%`:'—'}
+            </div>
+          </div>
+        </div>
+
+        {(posForCand.requirements||[]).length===0
+          ? <div className="card"><div className="text-muted text-sm">No requirements set for this position. Add requirements to the position first.</div></div>
+          : <div className="card" style={{padding:0}}>
+              <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead><tr>
+                  <th style={{padding:'12px 16px'}}>Requirement</th>
+                  <th style={{padding:'12px 16px'}}>Weight</th>
+                  <th style={{padding:'12px 16px'}}>Score</th>
+                  <th style={{padding:'12px 16px'}}>Notes</th>
+                </tr></thead>
+                <tbody>
+                  {(posForCand.requirements||[]).map(req=>{
+                    const s = (cand.scores||{})[req.id]||{};
+                    return <tr key={req.id}>
+                      <td style={{padding:'12px 16px'}}>
+                        <div style={{fontWeight:500}}>{req.name}</div>
+                        {req.mustHave && <span className="badge badge-red mt-1" style={{fontSize:10}}>Must Have</span>}
+                      </td>
+                      <td style={{padding:'12px 16px',color:'var(--muted)',fontSize:12}}>{req.weight}×</td>
+                      <td style={{padding:'12px 16px'}}>
+                        <ScoreBtns value={s.score} onChange={v=>setScore(req.id,'score',v)}/>
+                        {s.score && <div style={{fontSize:10,color:'var(--muted)',marginTop:4}}>{scoreLabel(s.score)}</div>}
+                      </td>
+                      <td style={{padding:'8px 16px'}}>
+                        <input style={{fontSize:12,padding:'6px 10px'}} placeholder="Add note..." value={s.note||''} onChange={e=>setScore(req.id,'note',e.target.value)}/>
+                      </td>
+                    </tr>;
+                  })}
+                </tbody>
+              </table>
+            </div>
+        }
+
+        <div className="card mt-4">
+          <div className="section-title">Overall Recommendation</div>
+          <div className="flex gap-2 mb-3" style={{flexWrap:'wrap'}}>
+            {['Strong Yes','Yes','Maybe','No','Strong No'].map(r=>(
+              <button key={r}
+                className={`btn btn-sm ${cand.recommendation===r?'btn-primary':'btn-secondary'}`}
+                onClick={()=>setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,recommendation:r}:c))}>
+                {r}
+              </button>
+            ))}
+          </div>
+          <div className="field" style={{margin:0}}>
+            <label>Overall Notes</label>
+            <textarea placeholder="Overall impression and reasoning..." value={cand.overallNotes||''} onChange={e=>setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,overallNotes:e.target.value}:c))}/>
+          </div>
+        </div>
+      </>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   REQUIREMENTS LIBRARY
+   ═══════════════════════════════════════ */
+function RequirementsView({ requirements, setRequirements }) {
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name:'', category:'' });
+  const categories = [...new Set(requirements.map(r=>r.category))];
+
+  const save = () => {
+    if (!form.name||!form.category) return;
+    setRequirements(rs=>[...rs,{...form,id:uid()}]);
+    setForm({name:'',category:''});
+    setShowModal(false);
+  };
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Requirements Library</div><div className="page-sub">Reusable criteria for scoring candidates</div></div>
+        <button className="btn btn-primary" onClick={()=>setShowModal(true)}>+ Add Requirement</button>
+      </div>
+      {categories.map(cat=>(
+        <div key={cat} className="card mb-4">
+          <div className="section-title">{cat}</div>
+          {requirements.filter(r=>r.category===cat).map(r=>(
+            <div key={r.id} className="flex items-center justify-between" style={{padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+              <div style={{fontSize:13,fontWeight:500}}>{r.name}</div>
+              <button className="btn btn-danger btn-xs" onClick={()=>setRequirements(rs=>rs.filter(x=>x.id!==r.id))}>Remove</button>
+            </div>
+          ))}
+        </div>
+      ))}
+      {showModal && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowModal(false)}>
+          <div className="modal">
+            <div className="modal-header"><div className="modal-title">Add Requirement</div><button className="modal-close" onClick={()=>setShowModal(false)}>×</button></div>
+            <div className="modal-body">
+              <div className="field"><label>Requirement Name *</label><input placeholder="e.g. 5+ years in SaaS" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/></div>
+              <div className="field"><label>Category *</label>
+                <input list="cats" placeholder="Experience, Leadership, Technical, Culture..." value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))}/>
+                <datalist id="cats">{categories.map(c=><option key={c} value={c}/>)}</datalist>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={save}>Add to Library</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   JD BUILDER
+   ═══════════════════════════════════════ */
+function JDBuilderView({ positions, setPositions, requirements: reqLib }) {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({ title:'', department:'', location:'', level:'Mid', description:'', responsibilities:'', qualifications:'', requirements:[] });
+  const [generated, setGenerated] = useState('');
+  const update = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const generateJD = () => {
+    const jd = `# ${form.title}
+**Department:** ${form.department} | **Location:** ${form.location} | **Level:** ${form.level}
+
+## About the Role
+${form.description}
+
+## Key Responsibilities
+${form.responsibilities}
+
+## Qualifications
+${form.qualifications}
+
+## What We're Looking For
+${form.requirements.map(r=>`• ${r.name}`).join('\n')}`;
+    setGenerated(jd);
+    setStep(3);
+  };
+
+  const createPosition = () => {
+    const newPos = {
+      id: uid(), title: form.title, department: form.department, location: form.location,
+      jd: generated, requirements: form.requirements, status: 'Open', createdAt: today()
+    };
+    setPositions(ps=>[...ps,newPos]);
+    alert(`Position "${form.title}" created!`);
+    setStep(1);
+    setForm({ title:'', department:'', location:'', level:'Mid', description:'', responsibilities:'', qualifications:'', requirements:[] });
+    setGenerated('');
+  };
+
+  const categories = [...new Set(reqLib.map(r=>r.category))];
+  const toggleReq = (req) => {
+    const exists = form.requirements.find(r=>r.name===req.name);
+    if (exists) setForm(f=>({...f,requirements:f.requirements.filter(r=>r.name!==req.name)}));
+    else setForm(f=>({...f,requirements:[...f.requirements,{id:uid(),name:req.name,weight:1,mustHave:false}]}));
+  };
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">JD Builder</div><div className="page-sub">Create job descriptions and positions in minutes</div></div>
+      </div>
+      <div className="flex gap-2 mb-4">
+        {['1. Basic Info','2. Requirements','3. Review & Create'].map((s,i)=>(
+          <div key={i} className="flex items-center gap-2">
+            <div style={{width:24,height:24,borderRadius:'50%',background:step===i+1?'var(--accent)':step>i+1?'var(--accent3)':'var(--surface2)',
+              border:`1px solid ${step>=i+1?'transparent':'var(--border)'}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700}}>
+              {step>i+1?'✓':i+1}
+            </div>
+            <span style={{fontSize:13,fontWeight:step===i+1?600:400,color:step===i+1?'var(--text)':'var(--muted)'}}>{s}</span>
+            {i<2 && <span style={{color:'var(--border)',margin:'0 4px'}}>›</span>}
+          </div>
+        ))}
+      </div>
+
+      {step===1 && <div className="card">
+        <div className="grid-2">
+          <div className="field"><label>Job Title *</label><input placeholder="Head of Growth" value={form.title} onChange={e=>update('title',e.target.value)}/></div>
+          <div className="field"><label>Department</label><input placeholder="Marketing" value={form.department} onChange={e=>update('department',e.target.value)}/></div>
+        </div>
+        <div className="grid-2">
+          <div className="field"><label>Location</label><input placeholder="Remote / New York, NY" value={form.location} onChange={e=>update('location',e.target.value)}/></div>
+          <div className="field"><label>Level</label>
+            <select value={form.level} onChange={e=>update('level',e.target.value)}>
+              {['Junior','Mid','Senior','Lead','Director','VP','C-Level'].map(l=><option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="field"><label>Role Description</label><textarea placeholder="Brief description of the role and its impact..." value={form.description} onChange={e=>update('description',e.target.value)}/></div>
+        <div className="field"><label>Key Responsibilities</label><textarea placeholder="• Drive customer acquisition strategy&#10;• Manage $X budget..." value={form.responsibilities} onChange={e=>update('responsibilities',e.target.value)}/></div>
+        <div className="field"><label>Qualifications</label><textarea placeholder="• 5+ years experience&#10;• Proven track record..." value={form.qualifications} onChange={e=>update('qualifications',e.target.value)}/></div>
+        <button className="btn btn-primary" onClick={()=>form.title&&setStep(2)} disabled={!form.title}>Next: Requirements →</button>
+      </div>}
+
+      {step===2 && <div className="card">
+        <div className="section-title">Select Requirements for this Position</div>
+        <div className="text-muted text-sm mb-4">Choose from your library. Selected: {form.requirements.length}</div>
+        {categories.map(cat=>(
+          <div key={cat} className="mb-4">
+            <div style={{fontSize:12,fontWeight:600,color:'var(--muted)',marginBottom:8}}>{cat}</div>
+            <div className="flex" style={{flexWrap:'wrap',gap:6}}>
+              {reqLib.filter(r=>r.category===cat).map(r=>{
+                const sel = form.requirements.find(x=>x.name===r.name);
+                return <button key={r.id} className="chip" style={sel?{borderColor:'var(--accent)',color:'var(--accent)',background:'rgba(79,142,247,.08)'}:{}} onClick={()=>toggleReq(r)}>
+                  {sel?'✓ ':''}{r.name}
+                </button>;
+              })}
+            </div>
+          </div>
+        ))}
+        <div className="flex gap-2 mt-4">
+          <button className="btn btn-secondary" onClick={()=>setStep(1)}>← Back</button>
+          <button className="btn btn-primary" onClick={generateJD}>Generate JD →</button>
+        </div>
+      </div>}
+
+      {step===3 && <div className="card">
+        <div className="section-title">Generated Job Description</div>
+        <textarea style={{minHeight:320,fontFamily:'var(--mono)',fontSize:12,lineHeight:1.7}} value={generated} onChange={e=>setGenerated(e.target.value)}/>
+        <div className="flex gap-2 mt-4">
+          <button className="btn btn-secondary" onClick={()=>setStep(2)}>← Back</button>
+          <button className="btn btn-primary" onClick={createPosition}>✓ Create Position</button>
+          <button className="btn btn-ghost" onClick={()=>navigator.clipboard.writeText(generated)}>📋 Copy</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   INTERVIEW NOTES
+   ═══════════════════════════════════════ */
+function InterviewsView({ candidates, setCandidates, positions }) {
+  const [selCand, setSelCand] = useState('');
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [noteInput, setNoteInput] = useState('');
+  const timerRef = useRef(null);
+
+  const cand = candidates.find(c=>c.id===selCand);
+  const pos = cand ? positions.find(p=>p.id===cand.positionId) : null;
+
+  useEffect(()=>{
+    if (running) { timerRef.current = setInterval(()=>setElapsed(e=>e+1),1000); }
+    else { clearInterval(timerRef.current); }
+    return ()=>clearInterval(timerRef.current);
+  },[running]);
+
+  const fmtTime = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+
+  const addNote = (star=false) => {
+    if (!noteInput.trim()||!selCand) return;
+    const note = { id:uid(), text:noteInput.trim(), time:fmtTime(elapsed), star, createdAt:new Date().toISOString() };
+    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
+    setNoteInput('');
+  };
+
+  const removeNote = (noteId) => setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:(c.interviewNotes||[]).filter(n=>n.id!==noteId)}:c));
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Interview Notes</div><div className="page-sub">Live note-taking with timestamps</div></div>
+      </div>
+      <div className="field mb-4" style={{maxWidth:300}}>
+        <label>Candidate</label>
+        <select value={selCand} onChange={e=>{setSelCand(e.target.value);setRunning(false);setElapsed(0)}}>
+          <option value="">Select candidate...</option>
+          {candidates.map(c=><option key={c.id} value={c.id}>{c.name} — {positions.find(p=>p.id===c.positionId)?.title||'?'}</option>)}
+        </select>
+      </div>
+
+      {!selCand && <div className="empty-state"><div className="empty-icon">🎙️</div><div className="empty-title">Select a candidate to start</div></div>}
+
+      {selCand && cand && <>
+        <div className="card mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div style={{fontWeight:700,fontSize:18}}>{cand.name}</div>
+              <div className="text-muted text-sm">{pos?.title}</div>
+            </div>
+            <div style={{textAlign:'center'}}>
+              <div className="timer-display">{fmtTime(elapsed)}</div>
+              <div className="flex gap-2 mt-2">
+                <button className={`btn btn-sm ${running?'btn-danger':'btn-green'}`} onClick={()=>setRunning(r=>!r)}>
+                  {running?'⏸ Pause':'▶ Start Timer'}
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={()=>{setRunning(false);setElapsed(0)}}>↺ Reset</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card mb-4">
+          <div className="section-title">Add Note</div>
+          <textarea placeholder="Type your note... (Enter to save, Shift+Enter for ⭐ highlight)" style={{minHeight:70}} value={noteInput}
+            onChange={e=>setNoteInput(e.target.value)}
+            onKeyDown={e=>{
+              if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addNote(false);}
+              if(e.key==='Enter'&&e.shiftKey){e.preventDefault();addNote(true);}
+            }}/>
+          <div className="flex gap-2 mt-2">
+            <button className="btn btn-primary btn-sm" onClick={()=>addNote(false)}>Add Note</button>
+            <button className="btn btn-secondary btn-sm" onClick={()=>addNote(true)}>⭐ Add Highlight</button>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="section-title">Interview Timeline ({(cand.interviewNotes||[]).length} notes)</div>
+          {(cand.interviewNotes||[]).length===0 && <div className="text-muted text-sm">No notes yet. Start the timer and take notes above.</div>}
+          {(cand.interviewNotes||[]).map(n=>(
+            <div key={n.id} className="note-item">
+              <div className="note-time">{n.time}</div>
+              <div className="note-text">{n.star && <span className="note-star">⭐ </span>}{n.text}</div>
+              <button className="btn btn-ghost btn-xs" onClick={()=>removeNote(n.id)}>✕</button>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   REFERENCE CHECKS
+   ═══════════════════════════════════════ */
+function ReferenceChecksView({ candidates, setCandidates, positions }) {
+  const [selCand, setSelCand] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingRef, setEditingRef] = useState(null);
+
+  const cand = candidates.find(c=>c.id===selCand);
+
+  const saveRef = (ref) => {
+    setCandidates(cs=>cs.map(c=>{
+      if(c.id!==selCand) return c;
+      const refs = c.references||[];
+      if(editingRef) return {...c,references:refs.map(r=>r.id===ref.id?ref:r)};
+      return {...c,references:[...refs,{...ref,id:uid()}]};
+    }));
+    setShowModal(false);
+  };
+
+  const removeRef = (refId) => setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,references:(c.references||[]).filter(r=>r.id!==refId)}:c));
+
+  const REF_STATUS_COLORS = { Pending:'badge-yellow', Scheduled:'badge-blue', Completed:'badge-green' };
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Reference Checks</div><div className="page-sub">Track and manage candidate references</div></div>
+        {selCand && <button className="btn btn-primary" onClick={()=>{setEditingRef(null);setShowModal(true)}}>+ Add Reference</button>}
+      </div>
+      <div className="field mb-4" style={{maxWidth:300}}>
+        <label>Candidate</label>
+        <select value={selCand} onChange={e=>setSelCand(e.target.value)}>
+          <option value="">Select candidate...</option>
+          {candidates.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      {!selCand && <div className="empty-state"><div className="empty-icon">📞</div><div className="empty-title">Select a candidate</div></div>}
+
+      {selCand && cand && <>
+        {(cand.references||[]).length===0 && <div className="empty-state"><div className="empty-icon">📞</div><div className="empty-title">No references yet</div><div className="empty-sub">Add references to track check status.</div></div>}
+        {(cand.references||[]).map(ref=>(
+          <div key={ref.id} className="ref-card">
+            <div className="ref-header">
+              <div>
+                <div className="ref-name">{ref.name}</div>
+                <div className="ref-meta">{ref.title} at {ref.company} · {ref.relationship}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`badge ${REF_STATUS_COLORS[ref.status]||'badge-gray'}`}>{ref.status}</span>
+                <button className="btn btn-ghost btn-sm" onClick={()=>{setEditingRef(ref);setShowModal(true)}}>Edit</button>
+                <button className="btn btn-danger btn-sm" onClick={()=>removeRef(ref.id)}>✕</button>
+              </div>
+            </div>
+            {ref.status==='Completed' && <>
+              <div className="flex gap-4 mt-2">
+                <div className="info-row"><span className="info-key">Overall Rating</span><span className="info-val">{ref.rating?`${ref.rating}/5`:'—'}</span></div>
+                <div className="info-row"><span className="info-key">Would Rehire?</span><span className="info-val" style={{color:ref.wouldRehire==='Yes'?'var(--accent3)':ref.wouldRehire==='No'?'var(--red)':'var(--muted)'}}>{ref.wouldRehire||'—'}</span></div>
+              </div>
+              {ref.notes && <div className="mt-2 text-sm">{ref.notes}</div>}
+              {ref.redFlags && <div className="mt-2 p-2 rounded" style={{background:'rgba(247,92,92,.08)',border:'1px solid rgba(247,92,92,.2)',fontSize:12,color:'var(--red)'}}>🚩 {ref.redFlags}</div>}
+            </>}
+          </div>
+        ))}
+      </>}
+
+      {showModal && <RefModal ref_={editingRef} onSave={saveRef} onClose={()=>setShowModal(false)}/>}
+    </div>
+  );
+}
+
+function RefModal({ ref_, onSave, onClose }) {
+  const [form, setForm] = useState(ref_||{name:'',title:'',company:'',relationship:'Former Manager',phone:'',email:'',status:'Pending',rating:'',wouldRehire:'',notes:'',redFlags:''});
+  const update=(k,v)=>setForm(f=>({...f,[k]:v}));
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal">
+        <div className="modal-header"><div className="modal-title">{ref_?'Edit Reference':'Add Reference'}</div><button className="modal-close" onClick={onClose}>×</button></div>
+        <div className="modal-body">
+          <div className="grid-2">
+            <div className="field"><label>Reference Name *</label><input placeholder="John Doe" value={form.name} onChange={e=>update('name',e.target.value)}/></div>
+            <div className="field"><label>Relationship</label>
+              <select value={form.relationship} onChange={e=>update('relationship',e.target.value)}>
+                {['Former Manager','Peer','Direct Report','Client','Mentor'].map(r=><option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid-2">
+            <div className="field"><label>Title</label><input placeholder="VP of Sales" value={form.title||''} onChange={e=>update('title',e.target.value)}/></div>
+            <div className="field"><label>Company</label><input placeholder="Acme Corp" value={form.company||''} onChange={e=>update('company',e.target.value)}/></div>
+          </div>
+          <div className="grid-2">
+            <div className="field"><label>Email</label><input placeholder="john@acme.com" value={form.email||''} onChange={e=>update('email',e.target.value)}/></div>
+            <div className="field"><label>Status</label>
+              <select value={form.status} onChange={e=>update('status',e.target.value)}>
+                {['Pending','Scheduled','Completed'].map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          {form.status==='Completed' && <>
+            <div className="grid-2">
+              <div className="field"><label>Overall Rating (1-5)</label>
+                <select value={form.rating} onChange={e=>update('rating',e.target.value)}>
+                  <option value="">Select...</option>
+                  {[1,2,3,4,5].map(n=><option key={n} value={n}>{n} — {scoreLabel(n)}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Would Rehire?</label>
+                <select value={form.wouldRehire} onChange={e=>update('wouldRehire',e.target.value)}>
+                  <option value="">Select...</option>
+                  <option>Yes</option><option>No</option><option>Unsure</option>
+                </select>
+              </div>
+            </div>
+            <div className="field"><label>Notes from Call</label><textarea placeholder="Key takeaways..." value={form.notes||''} onChange={e=>update('notes',e.target.value)}/></div>
+            <div className="field"><label>Red Flags (if any)</label><input placeholder="Any concerns noted..." value={form.redFlags||''} onChange={e=>update('redFlags',e.target.value)}/></div>
+          </>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={()=>form.name&&onSave(form)} disabled={!form.name}>
+            {ref_?'Save Changes':'Add Reference'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   COMPARISON VIEW
+   ═══════════════════════════════════════ */
+function ComparisonView({ candidates, positions }) {
+  const [selPos, setSelPos] = useState('');
+  const [selCands, setSelCands] = useState([]);
+
+  const pos = positions.find(p=>p.id===selPos);
+  const candsByPos = selPos ? candidates.filter(c=>c.positionId===selPos) : [];
+
+  const toggleCand = (id) => {
+    if (selCands.includes(id)) setSelCands(s=>s.filter(x=>x!==id));
+    else if (selCands.length<4) setSelCands(s=>[...s,id]);
+  };
+
+  const compareCands = candidates.filter(c=>selCands.includes(c.id));
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Candidate Comparison</div><div className="page-sub">Side-by-side comparison with weighted scores</div></div>
+      </div>
+      <div className="grid-2 mb-4">
+        <div className="field" style={{margin:0}}>
+          <label>Position</label>
+          <select value={selPos} onChange={e=>{setSelPos(e.target.value);setSelCands([])}}>
+            <option value="">Select position...</option>
+            {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+          </select>
+        </div>
+      </div>
+      {selPos && <div className="mb-4">
+        <div className="section-title">Select Candidates to Compare (up to 4)</div>
+        <div className="flex" style={{flexWrap:'wrap',gap:6}}>
+          {candsByPos.map(c=>(
+            <button key={c.id} className="chip" style={selCands.includes(c.id)?{borderColor:'var(--accent)',color:'var(--accent)',background:'rgba(79,142,247,.08)'}:{}} onClick={()=>toggleCand(c.id)}>
+              {selCands.includes(c.id)?'✓ ':''}{c.name}
+            </button>
+          ))}
+        </div>
+      </div>}
+
+      {compareCands.length>0 && pos && <>
+        <div className="card" style={{padding:0,overflowX:'auto'}}>
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th style={{minWidth:180}}>Requirement</th>
+                <th style={{minWidth:80}}>Weight</th>
+                {compareCands.map(c=><th key={c.id} style={{minWidth:140}}>{c.name}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {(pos.requirements||[]).map(req=>(
+                <tr key={req.id}>
+                  <td className="req-col">
+                    {req.name}
+                    {req.mustHave && <span className="badge badge-red ml-1" style={{fontSize:10}}>Must Have</span>}
+                  </td>
+                  <td className="text-muted text-xs">{req.weight}×</td>
+                  {compareCands.map(c=>{
+                    const s=(c.scores||{})[req.id];
+                    return <td key={c.id} className="score-cell">
+                      {s?.score
+                        ? <span style={{color:scoreColor(s.score),fontWeight:700,fontFamily:'var(--mono)'}}>{s.score}</span>
+                        : <span className="text-muted">—</span>}
+                    </td>;
+                  })}
+                </tr>
+              ))}
+              <tr style={{background:'var(--surface2)'}}>
+                <td colSpan={2} style={{fontWeight:700}}>Overall Weighted Score</td>
+                {compareCands.map(c=>{
+                  const sc = calcWeightedScore(c.scores||{}, pos.requirements||[]);
+                  return <td key={c.id} className="score-cell">
+                    <span style={{fontWeight:700,color:sc>=80?'var(--accent3)':sc>=60?'var(--accent)':sc?'var(--yellow)':'var(--muted)',fontFamily:'var(--mono)',fontSize:16}}>
+                      {sc!=null?`${sc}%`:'—'}
+                    </span>
+                  </td>;
+                })}
+              </tr>
+              <tr>
+                <td colSpan={2} style={{fontWeight:600,fontSize:12,color:'var(--muted)'}}>Recommendation</td>
+                {compareCands.map(c=>(
+                  <td key={c.id} className="score-cell">
+                    {c.recommendation
+                      ? <span className={`badge ${c.recommendation.includes('Yes')?'badge-green':c.recommendation==='Maybe'?'badge-yellow':'badge-red'}`}>{c.recommendation}</span>
+                      : <span className="text-muted">—</span>}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </>}
+
+      {!selPos && <div className="empty-state"><div className="empty-icon">⚖️</div><div className="empty-title">Select a position to compare candidates</div></div>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   TEAM SCORING (Interviewer Portal)
+   ═══════════════════════════════════════ */
+function TeamScoringView({ positions, candidates, setCandidates }) {
+  const [selPos, setSelPos] = useState('');
+  const [selCand, setSelCand] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const pos = positions.find(p=>p.id===selPos);
+  const cand = candidates.find(c=>c.id===selCand);
+
+  const shareLink = selCand ? `${window.location.href.split('?')[0]}?scorecard=${selCand}` : '';
+
+  const copy = () => {
+    navigator.clipboard.writeText(shareLink);
+    setCopied(true);
+    setTimeout(()=>setCopied(false),2000);
+  };
+
+  const teamScores = cand?.teamScores || [];
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Team Scoring</div><div className="page-sub">Share scorecards with interviewers for their ratings</div></div>
+      </div>
+      <div className="grid-2 mb-4">
+        <div className="field" style={{margin:0}}>
+          <label>Position</label>
+          <select value={selPos} onChange={e=>{setSelPos(e.target.value);setSelCand('')}}>
+            <option value="">Select position...</option>
+            {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+          </select>
+        </div>
+        <div className="field" style={{margin:0}}>
+          <label>Candidate</label>
+          <select value={selCand} onChange={e=>setSelCand(e.target.value)}>
+            <option value="">Select candidate...</option>
+            {candidates.filter(c=>!selPos||c.positionId===selPos).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {selCand && cand && <>
+        <div className="card mb-4">
+          <div className="section-title">Shareable Scorecard Link</div>
+          <div className="text-muted text-sm mb-3">Send this link to interviewers. They can submit their scores without needing an account.</div>
+          <div className="share-code-box">
+            <div className="share-code" style={{fontSize:13,wordBreak:'break-all'}}>{shareLink}</div>
+            <button className="btn btn-primary btn-sm" onClick={copy}>{copied?'✓ Copied!':'📋 Copy'}</button>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="section-title">Team Submissions ({teamScores.length})</div>
+          {teamScores.length===0
+            ? <div className="text-muted text-sm">No team scores submitted yet. Share the link above with your interviewers.</div>
+            : teamScores.map((ts,i)=>(
+                <div key={i} style={{padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
+                  <div className="flex items-center justify-between">
+                    <div style={{fontWeight:600}}>{ts.evaluatorName}</div>
+                    <span className={`badge ${ts.recommendation?.includes('Yes')?'badge-green':ts.recommendation==='Maybe'?'badge-yellow':'badge-red'}`}>{ts.recommendation}</span>
+                  </div>
+                  <div className="text-muted text-xs mt-1">{ts.evaluatorEmail} · Submitted {fmtDate(ts.submittedAt)}</div>
+                </div>
+              ))
+          }
+        </div>
+      </>}
+
+      {!selCand && <div className="empty-state"><div className="empty-icon">🔗</div><div className="empty-title">Select a candidate to generate share link</div></div>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   EXTERNAL INTERVIEWER SCORECARD
+   (shown when URL has ?scorecard=xxx)
+   ═══════════════════════════════════════ */
+function ExternalScorecard({ candidateId, candidates, setCandidates, positions }) {
+  const [step, setStep] = useState(1);
+  const [evaluator, setEvaluator] = useState({ name:'', email:'' });
+  const [scores, setScores] = useState({});
+  const [recommendation, setRecommendation] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const cand = candidates.find(c=>c.id===candidateId);
+  const pos = cand ? positions.find(p=>p.id===cand.positionId) : null;
+
+  if (!cand || !pos) return <div className="external-bg"><div className="external-card"><div style={{textAlign:'center',color:'var(--muted)'}}>Scorecard not found.</div></div></div>;
+
+  const submit = () => {
+    const submission = { evaluatorName:evaluator.name, evaluatorEmail:evaluator.email, scores, recommendation, notes, submittedAt:today() };
+    setCandidates(cs=>cs.map(c=>c.id===candidateId?{...c,teamScores:[...(c.teamScores||[]),submission]}:c));
+    setSubmitted(true);
+  };
+
+  if (submitted) return (
+    <div className="external-bg">
+      <div className="external-card" style={{textAlign:'center'}}>
+        <div style={{fontSize:48,marginBottom:16}}>✅</div>
+        <div style={{fontSize:22,fontWeight:700,marginBottom:8}}>Thank you, {evaluator.name}!</div>
+        <div className="text-muted">Your scorecard for <strong>{cand.name}</strong> has been submitted.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="external-bg">
+      <div className="external-card">
+        <div className="auth-brand" style={{marginBottom:4}}>Hiring Command Center</div>
+        <div className="text-muted text-sm mb-4">Interview Scorecard</div>
+        <div style={{fontSize:20,fontWeight:700}}>{cand.name}</div>
+        <div className="text-muted text-sm mb-4">{pos.title}</div>
+        <hr className="divider"/>
+
+        {step===1 && <>
+          <div className="section-title">Your Information</div>
+          <div className="field"><label>Your Name *</label><input placeholder="Jane Smith" value={evaluator.name} onChange={e=>setEvaluator(ev=>({...ev,name:e.target.value}))}/></div>
+          <div className="field"><label>Your Email</label><input type="email" placeholder="jane@company.com" value={evaluator.email} onChange={e=>setEvaluator(ev=>({...ev,email:e.target.value}))}/></div>
+          <button className="btn btn-primary btn-full mt-2" onClick={()=>evaluator.name&&setStep(2)} disabled={!evaluator.name}>Start Scoring →</button>
+        </>}
+
+        {step===2 && <>
+          <div className="section-title">Rate the Candidate</div>
+          {(pos.requirements||[]).length===0 && <div className="text-muted text-sm">No requirements defined for this position.</div>}
+          {(pos.requirements||[]).map(req=>(
+            <div key={req.id} className="card-sm mb-3" style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8}}>
+              <div style={{fontWeight:600,fontSize:13,marginBottom:10}}>{req.name}{req.mustHave&&<span className="badge badge-red ml-2" style={{fontSize:10}}>Must Have</span>}</div>
+              <ScoreBtns value={scores[req.id]?.score} onChange={v=>setScores(s=>({...s,[req.id]:{...s[req.id],score:v}}))}/>
+              {scores[req.id]?.score && <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{scoreLabel(scores[req.id].score)}</div>}
+              <input className="mt-2" style={{fontSize:12,padding:'6px 10px'}} placeholder="Optional note..." value={scores[req.id]?.note||''} onChange={e=>setScores(s=>({...s,[req.id]:{...s[req.id],note:e.target.value}}))}/>
+            </div>
+          ))}
+          <div className="field mt-4">
+            <label>Overall Recommendation</label>
+            <div className="flex" style={{flexWrap:'wrap',gap:6}}>
+              {['Strong Yes','Yes','Maybe','No','Strong No'].map(r=>(
+                <button key={r} className={`btn btn-sm ${recommendation===r?'btn-primary':'btn-secondary'}`} onClick={()=>setRecommendation(r)}>{r}</button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <label>Overall Notes</label>
+            <textarea placeholder="Your overall impression of the candidate..." value={notes} onChange={e=>setNotes(e.target.value)}/>
+          </div>
+          <button className="btn btn-primary btn-full" onClick={submit}>Submit Scorecard ✓</button>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   MAIN APP
+   ═══════════════════════════════════════ */
+function App() {
+  const [user, setUser] = useState(null);
+  const [org, setOrg] = useState(null);
+  const [view, setView] = useState('dashboard');
+  const [positions, setPositionsState] = useState([]);
+  const [candidates, setCandidatesState] = useState([]);
+  const [requirements, setRequirementsState] = useState(DEFAULT_REQUIREMENTS);
+
+  // Check URL for external scorecard
+  const urlParams = new URLSearchParams(window.location.search);
+  const scorecardId = urlParams.get('scorecard');
+
+  // Persist to localStorage
+  useEffect(()=>{ if(user) localStorage.setItem('hcc_positions_'+user.orgId, JSON.stringify(positions)); },[positions,user]);
+  useEffect(()=>{ if(user) localStorage.setItem('hcc_candidates_'+user.orgId, JSON.stringify(candidates)); },[candidates,user]);
+  useEffect(()=>{ if(user) localStorage.setItem('hcc_requirements_'+user.orgId, JSON.stringify(requirements)); },[requirements,user]);
+
+  const setPositions = (fn) => setPositionsState(fn);
+  const setCandidates = (fn) => setCandidatesState(fn);
+  const setRequirements = (fn) => setRequirementsState(fn);
+
+  // Check for existing session
+  useEffect(()=>{
+    const session = storage.get('hcc_session', null);
+    if (session && session.id) {
+      const orgData = storage.get('hcc_orgs', []).find(o=>o.id===session.orgId);
+      setUser(session);
+      setOrg(orgData);
+      // Load org data
+      const p = localStorage.getItem('hcc_positions_'+session.orgId);
+      const c = localStorage.getItem('hcc_candidates_'+session.orgId);
+      const r = localStorage.getItem('hcc_requirements_'+session.orgId);
+      if (p) setPositionsState(JSON.parse(p));
+      if (c) setCandidatesState(JSON.parse(c));
+      if (r) setRequirementsState(JSON.parse(r));
+    }
+  },[]);
+
+  // If external scorecard link
+  if (scorecardId) {
+    return <ExternalScorecard candidateId={scorecardId} candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+  }
+
+  if (!user) {
+    return <AuthScreen onAuth={(u,o)=>{
+      setUser(u); setOrg(o);
+      const p = localStorage.getItem('hcc_positions_'+u.orgId);
+      const c = localStorage.getItem('hcc_candidates_'+u.orgId);
+      const r = localStorage.getItem('hcc_requirements_'+u.orgId);
+      if (p) setPositionsState(JSON.parse(p));
+      if (c) setCandidatesState(JSON.parse(c));
+      if (r) setRequirementsState(JSON.parse(r));
+    }}/>;
+  }
+
+  const NAV = [
+    { id:'dashboard', icon:'🏠', label:'Dashboard' },
+    { id:'positions', icon:'📋', label:'Positions' },
+    { id:'candidates', icon:'👤', label:'Candidates' },
+    { id:'scorecards', icon:'⭐', label:'Scorecards' },
+    { id:'interviews', icon:'🎙️', label:'Interview Notes' },
+    { id:'references', icon:'📞', label:'Reference Checks' },
+    { id:'comparison', icon:'⚖️', label:'Comparison' },
+    { id:'team', icon:'🔗', label:'Team Scoring' },
+    { id:'jdbuilder', icon:'✍️', label:'JD Builder' },
+    { id:'requirements', icon:'📚', label:'Requirements Library' },
+  ];
+
+  const renderView = () => {
+    switch(view) {
+      case 'dashboard': return <Dashboard user={user} org={org} positions={positions} candidates={candidates}/>;
+      case 'positions': return <PositionsView positions={positions} setPositions={setPositions} requirements={requirements} candidates={candidates}/>;
+      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+      case 'scorecards': return <ScorecardsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+      case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+      case 'references': return <ReferenceChecksView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+      case 'comparison': return <ComparisonView candidates={candidates} positions={positions}/>;
+      case 'team': return <TeamScoringView positions={positions} candidates={candidates} setCandidates={setCandidates}/>;
+      case 'jdbuilder': return <JDBuilderView positions={positions} setPositions={setPositions} requirements={requirements}/>;
+      case 'requirements': return <RequirementsView requirements={requirements} setRequirements={setRequirements}/>;
+      default: return null;
+    }
+  };
+
+  const initials = user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-name">Hiring CC</div>
+          <div className="sidebar-org">{org?.name||'My Organization'}</div>
+        </div>
+        <div className="nav-section">
+          {NAV.map(n=>(
+            <button key={n.id} className={`nav-item ${view===n.id?'active':''}`} onClick={()=>setView(n.id)}>
+              <span className="nav-icon">{n.icon}</span>{n.label}
+            </button>
+          ))}
+        </div>
+        <div className="sidebar-footer">
+          <div className="user-pill">
+            <div className="user-avatar">{initials}</div>
+            <div className="user-info">
+              <div className="user-name">{user.name}</div>
+              <div className="user-role">{user.role}</div>
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-sm btn-full mt-2" style={{justifyContent:'flex-start',gap:8}} onClick={()=>{storage.set('hcc_session',null);setUser(null);setOrg(null);}}>
+            🚪 Sign Out
+          </button>
+        </div>
+      </div>
+      <div className="main">{renderView()}</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
