@@ -420,23 +420,28 @@ async function readJDFile(file, callback) {
   if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
     try {
       const pdfjsLib = window['pdfjs-dist/build/pdf'];
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      // Use fake worker to avoid CORS issues with worker scripts
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        fullText += textContent.items.map(item => item.str).join(' ') + '
-';
+      const typedArray = new Uint8Array(arrayBuffer);
+      const pdfDoc = await pdfjsLib.getDocument(typedArray).promise;
+      let text = '';
+      for (let p = 1; p <= pdfDoc.numPages; p++) {
+        const page = await pdfDoc.getPage(p);
+        const tc = await page.getTextContent();
+        text += tc.items.map(i => i.str).join(' ') + '\n';
       }
-      callback(fullText.trim());
-    } catch(e) {
-      callback('Could not extract PDF text. Please paste the JD directly.');
+      const result = text.trim();
+      callback(result.length > 50 ? result : 'PDF text could not be extracted. Please paste the job description below.');
+    } catch(err) {
+      console.warn('PDF.js error:', err);
+      callback('PDF could not be read. Please paste the job description text below.');
     }
   } else {
+    // Plain text / doc
     const reader = new FileReader();
     reader.onload = ev => callback(ev.target.result);
+    reader.onerror = () => callback('File could not be read. Please paste the text below.');
     reader.readAsText(file);
   }
 }
