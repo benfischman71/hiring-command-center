@@ -762,27 +762,12 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
               </button>
               <button className="btn btn-secondary" onClick={()=>{
                 if (!form.jd) return;
-                // Client-side formatting — no API needed
-                let text = form.jd;
-                // Add line breaks before common section headers
-                const headers = ['About the Role','About Us','What You'll Do','What We're Looking For','Requirements','Qualifications','Responsibilities','Key Responsibilities','Who You Are','Benefits','Location','Reports to','About the Company','The Role','You Will','We're Looking For','What You'll Bring','Nice to Have','Must Have'];
-                headers.forEach(h => {
-                  const re = new RegExp('(\\s)(' + h + ')', 'g');
-                  text = text.replace(re, '\n\n' + h);
-                });
-                // Add line breaks before bullet-like items
-                text = text.replace(/\s+●\s+/g, '
-● ');
-                text = text.replace(/\s+•\s+/g, '
-• ');
-                text = text.replace(/\s+·\s+/g, '
-· ');
-                // Clean up excessive whitespace
-                text = text.replace(/
-{3,}/g, '
-
-').trim();
-                update('jd', text);
+                let t = form.jd;
+                t = t.replace(/([a-z\.\!\?])([A-Z])/g, '$1\n$2');
+                t = t.replace(/\s+●\s+/g, '\n● ');
+                t = t.replace(/\s+•\s+/g, '\n• ');
+                t = t.replace(/\n{3,}/g, '\n\n').trim();
+                update('jd', t);
               }}>
                 📐 Format Text
               </button>
