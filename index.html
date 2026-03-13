@@ -767,9 +767,8 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
                 // Add line breaks before common section headers
                 const headers = ['About the Role','About Us','What You'll Do','What We're Looking For','Requirements','Qualifications','Responsibilities','Key Responsibilities','Who You Are','Benefits','Location','Reports to','About the Company','The Role','You Will','We're Looking For','What You'll Bring','Nice to Have','Must Have'];
                 headers.forEach(h => {
-                  text = text.replace(new RegExp(`(\s)(${h})`, 'g'), `
-
-$2`);
+                  const re = new RegExp('(\\s)(' + h + ')', 'g');
+                  text = text.replace(re, '\n\n' + h);
                 });
                 // Add line breaks before bullet-like items
                 text = text.replace(/\s+●\s+/g, '
