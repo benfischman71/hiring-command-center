@@ -1500,9 +1500,9 @@ function CleanupNotesButton({ selCand, setCandidates, candidates }) {
   };
 
   const saveAsSummary = () => {
-    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,overallNotes:(c.overallNotes?c.overallNotes+' --- ':'')+summary}:c));
+    const cleanedNote = { id: uid(), text: summary, time: 'cleaned', star: true, createdAt: new Date().toISOString() };
+    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c, interviewNotes:[cleanedNote]}:c));
     setShowSummary(false);
-    alert('Summary saved to Overall Notes in Scorecard!');
   };
 
   return (
@@ -1516,7 +1516,7 @@ function CleanupNotesButton({ selCand, setCandidates, candidates }) {
               <div style={{fontWeight:700,fontSize:16,marginBottom:16}}>✨ Cleaned Up Notes</div>
               <textarea style={{minHeight:300,fontSize:13,lineHeight:1.8,width:'100%'}} value={summary} onChange={e=>setSummary(e.target.value)}/>
               <div className="flex gap-2 mt-3">
-                <button className="btn btn-primary" onClick={saveAsSummary}>Save to Scorecard Notes</button>
+                <button className="btn btn-primary" onClick={saveAsSummary}>Replace Notes with This</button>
                 <button className="btn btn-secondary" onClick={()=>navigator.clipboard.writeText(summary)}>📋 Copy</button>
                 <button className="btn btn-ghost" onClick={()=>setShowSummary(false)}>Close</button>
               </div>
