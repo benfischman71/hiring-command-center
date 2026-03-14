@@ -1523,8 +1523,47 @@ function InterviewsView({ candidates, setCandidates, positions }) {
 
         <div className="card mb-4">
           <div className="section-title">Add Note</div>
-          <textarea placeholder="Type your note... (Enter to save, Shift+Enter for ⭐ highlight)" style={{minHeight:70}} value={noteInput}
+          <textarea placeholder="Type or paste notes here... drag a .txt file to import · Enter to save · Shift+Enter for ⭐ highlight" 
+            style={{minHeight:70}} value={noteInput}
             onChange={e=>setNoteInput(e.target.value)}
+            onPaste={e=>{
+              const text = e.clipboardData.getData('text');
+              if (text && text.length > 200) {
+                e.preventDefault();
+                // Long paste — split into multiple notes by line
+                const lines = text.split('\n').filter(l=>l.trim());
+                lines.forEach((line,i) => {
+                  setTimeout(()=>{
+                    const note = { id:uid(), text:line.trim(), time:'0:00', star:false, createdAt:new Date().toISOString() };
+                    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
+                  }, i*10);
+                });
+                setNoteInput('');
+              }
+            }}
+            onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+            onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+            onDrop={e=>{
+              e.preventDefault();
+              e.currentTarget.style.borderColor='';
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                  const lines = ev.target.result.split('\n').filter(l=>l.trim());
+                  lines.forEach((line,i) => {
+                    setTimeout(()=>{
+                      const note = { id:uid(), text:line.trim(), time:'imported', star:false, createdAt:new Date().toISOString() };
+                      setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
+                    }, i*10);
+                  });
+                };
+                reader.readAsText(file);
+              } else {
+                const text = e.dataTransfer.getData('text');
+                if (text) setNoteInput(n => n + text);
+              }
+            }}
             onKeyDown={e=>{
               if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();addNote(false);}
               if(e.key==='Enter'&&e.shiftKey){e.preventDefault();addNote(true);}
