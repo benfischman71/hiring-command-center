@@ -605,7 +605,7 @@ function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) 
             return (
               <div key={c.id} className="flex items-center justify-between" 
                 style={{padding:'10px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'}}
-                onClick={()=>setView&&setView('scorecards')}
+                onClick={()=>{setView&&setView('candidates');}}
                 onMouseEnter={e=>e.currentTarget.style.opacity='.7'}
                 onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                 <div>
