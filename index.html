@@ -1475,8 +1475,7 @@ function CleanupNotesButton({ selCand, setCandidates, candidates }) {
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
 
   const cand = candidates.find(c=>c.id===selCand);
-  const notes = (cand?.interviewNotes||[]).map(n=>n.text).join('
-');
+  const notes = (cand?.interviewNotes||[]).map(n=>n.text).join(' | ');
 
   const cleanup = async () => {
     if (!notes.trim()) return;
