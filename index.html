@@ -939,19 +939,7 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `Extract candidate information from this LinkedIn profile text. Return ONLY a JSON object with no markdown, no backticks:
-{
-  "name": "full name",
-  "email": "email if visible or empty string",
-  "phone": "phone if visible or empty string",
-  "linkedIn": "linkedin url if visible or empty string",
-  "currentTitle": "current job title",
-  "currentCompany": "current company",
-  "notes": "2-3 sentence summary of their background and experience"
-}
-
-LinkedIn profile text:
-${liText.slice(0, 3000)}` }]
+          prompt: 'Extract candidate info from this LinkedIn profile. Return ONLY valid JSON with fields: name, email, phone, linkedIn, currentTitle, currentCompany, notes. Profile: ' + liText.slice(0, 3000)
         })
       });
       const data = await response.json();
@@ -1231,22 +1219,8 @@ function JDBuilderView({ positions, setPositions, requirements: reqLib }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `You are an expert recruiter and talent acquisition specialist. Create a compelling, detailed job description based on the following information:
-
-${aiPrompt}
-
-Return a JSON object with these exact fields (no markdown, no backticks, just raw JSON):
-{
-  "title": "job title",
-  "department": "department name",
-  "location": "location or Remote",
-  "level": "one of: Junior, Mid, Senior, Lead, Director, VP, C-Level",
-  "description": "2-3 sentence role overview",
-  "responsibilities": "bullet points starting with •, one per line, 5-7 items",
-  "qualifications": "bullet points starting with •, one per line, 5-7 items",
-  "requirements": ["requirement 1", "requirement 2", "requirement 3", "requirement 4", "requirement 5"]
-}`
-          }]
+          prompt: 'You are an expert recruiter. Create a job description for: ' + aiPrompt + '. Return ONLY a JSON object with fields: title, department, location, level (Junior/Mid/Senior/Lead/Director/VP/C-Level), description (2-3 sentences), responsibilities (bullet points with •), qualifications (bullet points with •), requirements (array of 5 strings). No markdown, no backticks, just raw JSON.',
+          max_tokens: 1500
         })
       });
       const data = await response.json();
