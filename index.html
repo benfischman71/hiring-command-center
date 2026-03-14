@@ -737,7 +737,10 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
           {tab==='details' && <>
             <div className="grid-2">
               <div className="field"><label>Job Title *</label><input placeholder="VP of Marketing" value={form.title} onChange={e=>update('title',e.target.value)}/></div>
-              <div className="field"><label>Department</label><input placeholder="Marketing" value={form.department||''} onChange={e=>update('department',e.target.value)}/></div>
+              <div className="field"><label>Department</label>
+                <input list="dept-list" placeholder="Select or type department..." value={form.department||''} onChange={e=>update('department',e.target.value)}/>
+                <datalist id="dept-list"><option value="Data"/><option value="Design"/><option value="Executive"/><option value="Finance"/><option value="HR"/><option value="Marketing"/><option value="Merchandising"/><option value="Operations"/><option value="Product"/><option value="Technology"/></datalist>
+              </div>
             </div>
             <div className="grid-2">
               <div className="field"><label>Location</label><input placeholder="Remote / NYC" value={form.location||''} onChange={e=>update('location',e.target.value)}/></div>
@@ -1406,7 +1409,10 @@ ${form.requirements.map(r=>`• ${r.name}`).join('\n')}`;
       {step===1 && <div className="card">
         <div className="grid-2">
           <div className="field"><label>Job Title *</label><input placeholder="Head of Growth" value={form.title} onChange={e=>update('title',e.target.value)}/></div>
-          <div className="field"><label>Department</label><input placeholder="Marketing" value={form.department} onChange={e=>update('department',e.target.value)}/></div>
+          <div className="field"><label>Department</label>
+                <input list="dept-list" placeholder="Select or type department..." value={form.department} onChange={e=>update('department',e.target.value)}/>
+                <datalist id="dept-list"><option value="Data"/><option value="Design"/><option value="Executive"/><option value="Finance"/><option value="HR"/><option value="Marketing"/><option value="Merchandising"/><option value="Operations"/><option value="Product"/><option value="Technology"/></datalist>
+              </div>
         </div>
         <div className="grid-2">
           <div className="field"><label>Location</label><input placeholder="Remote / New York, NY" value={form.location} onChange={e=>update('location',e.target.value)}/></div>
