@@ -2792,6 +2792,7 @@ function App() {
     { id:'team', icon:'🔗', label:'Team Scoring' },
     { id:'jdbuilder', icon:'✍️', label:'JD Builder' },
     { id:'requirements', icon:'📚', label:'Requirements Library' },
+    { id:'linkedin', icon:'💼', label:'LinkedIn' },
     { id:'admin', icon:'🔐', label:'Admin' },
   ];
 
@@ -2859,7 +2860,9 @@ function App() {
         </div>
         <div className="nav-section">
           {NAV.filter(n=>n.id!=='admin'||(user.role==='owner'||user.email==='ben@tradecoffeeco.com')).map(n=>(
-            <button key={n.id} className={`nav-item ${view===n.id?'active':''}`} onClick={()=>setView(n.id)}>
+            <button key={n.id} className={`nav-item ${view===n.id?'active':''}`} 
+              onClick={()=>n.id==='linkedin'?window.open('https://www.linkedin.com','_blank'):setView(n.id)}
+              style={n.id==='linkedin'?{color:'#0a66c2',fontWeight:700}:{}}>
               <span className="nav-icon">{n.icon}</span>{n.label}
             </button>
           ))}
@@ -2876,7 +2879,7 @@ function App() {
             <button className="btn btn-ghost btn-sm" style={{flex:1,justifyContent:'flex-start',gap:8}} onClick={()=>{storage.set('hcc_session',null);setUser(null);setOrg(null);}}>
               🚪 Sign Out
             </button>
-            <button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:11}} onClick={()=>setShowDebug(d=>!d)} title="Debug log">🔍</button>
+<button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:11}} onClick={()=>setShowDebug(d=>!d)} title="Debug log">🔍</button>
           </div>
         </div>
       </div>
