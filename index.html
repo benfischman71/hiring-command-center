@@ -659,7 +659,7 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
                     <td><span className={`badge ${p.status==='Open'?'badge-green':'badge-gray'}`}>{p.status}</span></td>
                     <td>
                       <div className="flex gap-2">
-                        <button className="btn btn-primary btn-sm" onClick={()=>{setEditing(p);setShowModal(true)}}>✏️ Edit</button>
+                        <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>{setEditing(p);setShowModal(true)}}>✏️ Edit</button>
                         <button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:11}} onClick={()=>{if(window.confirm('Delete this position?'))setPositions(ps=>ps.filter(x=>x.id!==p.id))}}>Delete</button>
                       </div>
                     </td>
