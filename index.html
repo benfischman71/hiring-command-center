@@ -1031,7 +1031,7 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
 /* ═══════════════════════════════════════
    CANDIDATES
    ═══════════════════════════════════════ */
-function CandidatesView({ candidates, setCandidates, positions, initialFilter, onFilterUsed }) {
+function CandidatesView({ candidates, setCandidates, positions, initialFilter, onFilterUsed, setView }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [filterPos, setFilterPos] = useState(initialFilter||'all');
@@ -1080,14 +1080,27 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                     <td>
                       <div className="flex gap-2">
                         <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>{setEditing(c);setShowModal(true)}}>✏️ Edit</button>
-                        <select className="btn btn-ghost btn-sm" style={{cursor:'pointer',maxWidth:130,fontSize:12}}
-                          value={c.positionId}
-                          onChange={e=>setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,positionId:e.target.value,scores:{}}:x))}
-                          title="Move to different position">
-                          <option value="" disabled>Move to...</option>
-                          {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+                        <select className="btn btn-secondary btn-sm" style={{cursor:'pointer',fontSize:12}}
+                          value=""
+                          onChange={e=>{
+                            const action = e.target.value;
+                            if (action==='notes') { setView('interviews'); }
+                            if (action==='scorecard') { setView('scorecards'); }
+                            if (action==='references') { setView('references'); }
+                            if (action.startsWith('move_')) { const pid=action.replace('move_',''); setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,positionId:pid,scores:{}}:x)); }
+                            e.target.value='';
+                          }}>
+                          <option value="">⚡ Actions</option>
+                          <optgroup label="Go to">
+                            <option value="notes">🎙️ Interview Notes</option>
+                            <option value="scorecard">⭐ Scorecard</option>
+                            <option value="references">📞 Reference Checks</option>
+                          </optgroup>
+                          <optgroup label="Move to Position">
+                            {positions.map(p=><option key={p.id} value={'move_'+p.id}>{p.title}</option>)}
+                          </optgroup>
                         </select>
-                        <button className="btn btn-danger btn-sm" onClick={()=>setCandidates(cs=>cs.filter(x=>x.id!==c.id))}>✕</button>
+                        <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Delete '+c.name+'?'))setCandidates(cs=>cs.filter(x=>x.id!==c.id))}}>✕</button>
                       </div>
                     </td>
                   </tr>;
@@ -2735,7 +2748,7 @@ function App() {
     switch(view) {
       case 'dashboard': return <Dashboard user={user} org={org} positions={positions} candidates={candidates} setView={setView} setFilterPos={setFilterPos}/>;
       case 'positions': return <PositionsView positions={positions} setPositions={setPositions} requirements={requirements} candidates={candidates}/>;
-      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions} initialFilter={filterPos} onFilterUsed={()=>setFilterPos('all')}/>;
+      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions} initialFilter={filterPos} onFilterUsed={()=>setFilterPos('all')} setView={setView}/>;
       case 'scorecards': return <ScorecardsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'references': return <ReferenceChecksView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
