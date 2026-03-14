@@ -332,18 +332,23 @@ const STAGE_COLORS = {Applied:'badge-gray',Screening:'badge-blue',Interview:'bad
   'Final Round':'badge-yellow','Offer':'badge-green',Hired:'badge-green',Rejected:'badge-red'};
 
 function calcWeightedScore(scores, requirements) {
-  // scores = {reqId: {score, weight}} or position requirements have weight
   let total=0, max=0;
-  requirements.forEach(req => {
+  for (const req of requirements) {
     const s = scores[req.id];
+    // Disqualify if Must Have and score is 1 (Does Not Meet) or unscored
+    if (req.mustHave && (!s || !s.score || s.score === 1)) return -1;
     if (s && s.score) {
       const w = req.weight || 1;
       total += s.score * w;
       max += 5 * w;
     }
-  });
+  }
   if (max===0) return null;
   return Math.round((total/max)*100);
+}
+
+function isDisqualified(scores, requirements) {
+  return calcWeightedScore(scores, requirements) === -1;
 }
 
 /* ═══════════════════════════════════════
@@ -385,6 +390,11 @@ function extractRequirementsFromJD(jdText) {
    SCORE BAR COMPONENT
    ═══════════════════════════════════════ */
 function ScoreBar({ score, max=100 }) {
+  if (score === -1) return (
+    <div className="score-bar-wrap">
+      <span className="badge badge-red" style={{fontSize:11}}>🚫 Disqualified</span>
+    </div>
+  );
   const pct = score ? Math.round((score/max)*100) : 0;
   const color = pct >= 80 ? 'var(--accent3)' : pct >= 60 ? 'var(--accent)' : pct >= 40 ? 'var(--yellow)' : 'var(--red)';
   return (
@@ -1083,8 +1093,8 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
           </div>
           <div style={{textAlign:'right'}}>
             <div className="text-muted text-xs mb-1">Overall Score</div>
-            <div style={{fontSize:28,fontWeight:700,color:overallScore>=80?'var(--accent3)':overallScore>=60?'var(--accent)':overallScore?'var(--yellow)':'var(--muted)'}}>
-              {overallScore!=null?`${overallScore}%`:'—'}
+            <div style={{fontSize:overallScore===-1?16:28,fontWeight:700,color:overallScore===-1?'var(--red)':overallScore>=80?'var(--accent3)':overallScore>=60?'var(--accent)':overallScore?'var(--yellow)':'var(--muted)'}}>
+              {overallScore===-1?'🚫 Disqualified':overallScore!=null?overallScore+'%':'—'}
             </div>
           </div>
         </div>
