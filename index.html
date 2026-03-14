@@ -2521,6 +2521,8 @@ function App() {
   const [filterPos, setFilterPos] = useState('all');
   const [showProfile, setShowProfile] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
+  const [debugLog, setDebugLog] = useState([]);
+  const addDebug = (msg) => setDebugLog(l => [...l.slice(-10), new Date().toLocaleTimeString() + ': ' + msg]);
   const [positions, setPositionsState] = useState([]);
   const [candidates, setCandidatesState] = useState([]);
   const [requirements, setRequirementsState] = useState(DEFAULT_REQUIREMENTS);
@@ -2608,10 +2610,13 @@ function App() {
             const u = { id: session.user.id, name: profile.name, email: profile.email, orgId: profile.org_id, role: profile.role };
             setUser(u); setOrg(org);
             // Load from Supabase cloud
-            const { data: appData } = await supabase.from('app_data').select('*').eq('org_id', profile.org_id);
+            addDebug('Loading data for org: ' + profile.org_id);
+            const { data: appData, error: loadErr } = await supabase.from('app_data').select('*').eq('org_id', profile.org_id);
+            addDebug(loadErr ? 'LOAD ERROR: ' + JSON.stringify(loadErr) : 'Got ' + (appData?.length||0) + ' data rows');
             const pos = appData?.find(d=>d.data_type==='positions');
             const cand = appData?.find(d=>d.data_type==='candidates');
             const req = appData?.find(d=>d.data_type==='requirements');
+            addDebug('pos:' + (pos?.data?.length||0) + ' cand:' + (cand?.data?.length||0));
             if (pos?.data?.length) {
               setPositionsState(pos.data);
               if (cand?.data?.length) setCandidatesState(cand.data);
@@ -2805,7 +2810,15 @@ function App() {
           </div>
         </div>
       </div>
-      <div className="main">{renderView()}</div>
+      <div className="main">
+        {debugLog.length > 0 && (
+          <div style={{background:'rgba(247,201,79,.1)',border:'1px solid var(--yellow)',padding:'8px 12px',fontSize:11,fontFamily:'var(--mono)',margin:12,borderRadius:8}}>
+            <div style={{fontWeight:700,marginBottom:4,color:'var(--yellow)'}}>🔍 Debug Log <button onClick={()=>setDebugLog([])} style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',float:'right'}}>✕</button></div>
+            {debugLog.map((l,i)=><div key={i} style={{color:'var(--text2)'}}>{l}</div>)}
+          </div>
+        )}
+        {renderView()}
+      </div>
     </div>
   );
 }
