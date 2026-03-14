@@ -947,20 +947,8 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
         candidate={editing}
         positions={positions}
         onSave={c=>{
-          if(editing) {
-            const now = new Date();
-            const savedAt = now.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
-            const newNote = c.quickNote ? [{ id:uid(), text:c.quickNote.trim(), time:'', star:false, createdAt:now.toISOString(), savedAt }] : [];
-            const {quickNote, ...rest} = c;
-            setCandidates(cs=>cs.map(x=>x.id===c.id?{...rest, interviewNotes:[...(x.interviewNotes||[]),...newNote]}:x));
-          }
-          else {
-            const now = new Date();
-            const savedAt = now.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
-            const newNote = c.quickNote ? [{ id:uid(), text:c.quickNote.trim(), time:'', star:false, createdAt:now.toISOString(), savedAt }] : [];
-            const {quickNote, ...rest} = c;
-            setCandidates(cs=>[...cs,{...rest,id:uid(),createdAt:today(),scores:{},interviewNotes:newNote}]);
-          }
+          if(editing) setCandidates(cs=>cs.map(x=>x.id===c.id?c:x));
+          else setCandidates(cs=>[...cs,{...c,id:uid(),createdAt:today(),scores:{}}]);
           setShowModal(false);
         }}
         onClose={()=>setShowModal(false)}
@@ -1063,22 +1051,7 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
             <div className="field"><label>LinkedIn URL</label><input placeholder="linkedin.com/in/..." value={form.linkedIn||''} onChange={e=>update('linkedIn',e.target.value)}/></div>
           </div>
           <div className="field"><label>General Notes</label><textarea placeholder="Initial impressions, source, etc." value={form.notes||''} onChange={e=>update('notes',e.target.value)}/></div>
-          <div className="field">
-            <label>Interview Notes</label>
-            <textarea 
-              style={{minHeight:100}} 
-              placeholder="Paste or type interview notes here... they will be saved with today's date and time"
-              value={form.quickNote||''}
-              onChange={e=>update('quickNote',e.target.value)}
-              onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
-              onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
-              onDrop={e=>{
-                e.preventDefault();e.currentTarget.style.borderColor='';
-                const file=e.dataTransfer.files[0];
-                if(file){const r=new FileReader();r.onload=ev=>update('quickNote',ev.target.result);r.readAsText(file);}
-                else{const t=e.dataTransfer.getData('text');if(t)update('quickNote',(form.quickNote||'')+t);}
-              }}/>
-          </div>
+
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
