@@ -659,8 +659,8 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
                     <td><span className={`badge ${p.status==='Open'?'badge-green':'badge-gray'}`}>{p.status}</span></td>
                     <td>
                       <div className="flex gap-2">
-                        <button className="btn btn-ghost btn-sm" onClick={()=>{setEditing(p);setShowModal(true)}}>Edit</button>
-                        <button className="btn btn-danger btn-sm" onClick={()=>setPositions(ps=>ps.filter(x=>x.id!==p.id))}>Delete</button>
+                        <button className="btn btn-primary btn-sm" onClick={()=>{setEditing(p);setShowModal(true)}}>✏️ Edit</button>
+                        <button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:11}} onClick={()=>{if(window.confirm('Delete this position?'))setPositions(ps=>ps.filter(x=>x.id!==p.id))}}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -1641,18 +1641,25 @@ function InterviewsView({ candidates, setCandidates, positions }) {
             onChange={e=>setNoteInput(e.target.value)}
             onPaste={e=>{
               const text = e.clipboardData.getData('text');
-              if (text && text.length > 200) {
+              if (!text) return;
+              if (text.length > 200) {
+                // Long paste — split into individual notes by line
                 e.preventDefault();
-                // Long paste — split into multiple notes by line
-                const lines = text.split('\n').filter(l=>l.trim());
-                lines.forEach((line,i) => {
-                  setTimeout(()=>{
-                    const note = { id:uid(), text:line.trim(), time:'0:00', star:false, createdAt:new Date().toISOString() };
-                    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
-                  }, i*10);
-                });
-                setNoteInput('');
+                const lines = text.split('\n').filter(l=>l.trim().length > 0);
+                if (lines.length > 1) {
+                  lines.forEach((line,i) => {
+                    setTimeout(()=>{
+                      const note = { id:uid(), text:line.trim(), time:fmtTime(elapsed), star:false, createdAt:new Date().toISOString() };
+                      setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
+                    }, i*10);
+                  });
+                  setNoteInput('');
+                } else {
+                  // Single long line — just paste into box
+                  setNoteInput(n => n + text);
+                }
               }
+              // Short paste — let it go into the textarea normally (don't preventDefault)
             }}
             onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
             onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
@@ -1701,6 +1708,108 @@ function InterviewsView({ candidates, setCandidates, positions }) {
           ))}
         </div>
       </>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   REFERENCE NOTE INPUT (inline)
+   ═══════════════════════════════════════ */
+function RefNoteInput({ refId, candId, setCandidates }) {
+  const [note, setNote] = useState('');
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const PROXY = 'https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
+
+  const addNotesToRef = (newNotes) => {
+    setCandidates(cs => cs.map(c => {
+      if (c.id !== candId) return c;
+      return { ...c, ref_checks: (c.ref_checks||[]).map(r =>
+        r.id === refId ? { ...r, notes: (r.notes ? r.notes + '
+' : '') + newNotes } : r
+      )};
+    }));
+  };
+
+  const saveNote = () => {
+    if (!note.trim()) return;
+    addNotesToRef(note.trim());
+    setNote('');
+  };
+
+  const parseTranscript = async () => {
+    if (!transcript.trim()) return;
+    setLoading(true);
+    try {
+      const resp = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({
+          prompt: 'Extract 5-8 key insights from this reference call transcript. Focus on strengths, weaknesses, working style, and any red flags. Return a plain text summary with each point on a new line starting with a bullet •. No JSON, just bullet points. Transcript: ' + transcript.slice(0, 5000),
+          max_tokens: 800
+        })
+      });
+      const data = await resp.json();
+      addNotesToRef(data.text || transcript);
+    } catch(e) {
+      addNotesToRef(transcript);
+    }
+    setTranscript(''); setShowTranscript(false); setLoading(false);
+  };
+
+  return (
+    <div className="mt-3" style={{borderTop:'1px solid var(--border)',paddingTop:12}}>
+      <div className="section-title mb-2">Add Notes</div>
+      <textarea
+        style={{minHeight:60,fontSize:12,marginBottom:6}}
+        placeholder="Type or paste notes... drag a .txt file to import"
+        value={note}
+        onChange={e=>setNote(e.target.value)}
+        onPaste={e=>{
+          const text = e.clipboardData.getData('text');
+          if (text && text.length > 300) { e.preventDefault(); addNotesToRef(text); }
+        }}
+        onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+        onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+        onDrop={e=>{
+          e.preventDefault(); e.currentTarget.style.borderColor='';
+          const file = e.dataTransfer.files[0];
+          if (file) { const r=new FileReader(); r.onload=ev=>addNotesToRef(ev.target.result); r.readAsText(file); }
+          else { const t=e.dataTransfer.getData('text'); if(t) setNote(n=>n+t); }
+        }}
+        onKeyDown={e=>{ if(e.key==='Enter'&&e.metaKey){e.preventDefault();saveNote();} }}/>
+      <div className="flex gap-2" style={{flexWrap:'wrap'}}>
+        <button className="btn btn-primary btn-sm" onClick={saveNote} disabled={!note.trim()}>Save Note</button>
+        <button className="btn btn-secondary btn-sm" onClick={()=>setShowTranscript(s=>!s)}>
+          {showTranscript?'Cancel':'🎙️ Import Call Transcript'}
+        </button>
+      </div>
+      {showTranscript && <div className="mt-3">
+        <textarea
+          style={{minHeight:120,fontSize:12,marginBottom:6}}
+          placeholder="Paste the reference call transcript or recording transcript here. Claude will extract key insights..."
+          value={transcript}
+          onChange={e=>setTranscript(e.target.value)}
+          onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+          onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+          onDrop={e=>{
+            e.preventDefault(); e.currentTarget.style.borderColor='';
+            const file=e.dataTransfer.files[0];
+            if(file){const r=new FileReader();r.onload=ev=>setTranscript(ev.target.result);r.readAsText(file);}
+            else{const t=e.dataTransfer.getData('text');if(t)setTranscript(t);}
+          }}/>
+        <div className="flex gap-2">
+          <button className="btn btn-purple btn-sm" onClick={parseTranscript} disabled={loading||!transcript.trim()}>
+            {loading?'⏳ Extracting...':'✨ Extract Insights with Claude'}
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>{addNotesToRef(transcript);setTranscript('');setShowTranscript(false);}} disabled={!transcript.trim()}>
+            Import as-is
+          </button>
+        </div>
+      </div>}
     </div>
   );
 }
@@ -1765,8 +1874,9 @@ function ReferenceChecksView({ candidates, setCandidates, positions }) {
                 <div className="info-row"><span className="info-key">Overall Rating</span><span className="info-val">{ref.rating?`${ref.rating}/5`:'—'}</span></div>
                 <div className="info-row"><span className="info-key">Would Rehire?</span><span className="info-val" style={{color:ref.wouldRehire==='Yes'?'var(--accent3)':ref.wouldRehire==='No'?'var(--red)':'var(--muted)'}}>{ref.wouldRehire||'—'}</span></div>
               </div>
-              {ref.notes && <div className="mt-2 text-sm">{ref.notes}</div>}
+              {ref.notes && <div className="mt-2 text-sm" style={{whiteSpace:'pre-wrap'}}>{ref.notes}</div>}
               {ref.redFlags && <div className="mt-2 p-2 rounded" style={{background:'rgba(247,92,92,.08)',border:'1px solid rgba(247,92,92,.2)',fontSize:12,color:'var(--red)'}}>🚩 {ref.redFlags}</div>}
+              <RefNoteInput refId={ref.id} candId={selCand} setCandidates={setCandidates}/>
             </>}
           </div>
         ))}
