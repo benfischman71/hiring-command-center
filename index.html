@@ -1677,7 +1677,7 @@ function CleanupNotesButton({ selCand, setCandidates, candidates }) {
     <div style={{textAlign:'right'}}>
       {!showSummary
         ? <button className="btn btn-purple btn-sm" onClick={cleanup} disabled={loading||!notes.trim()}>
-            {loading?'⏳ Organizing...':'✨ Clean up Notes with Claude'}
+            {loading?'⏳ Merging...':'✨ Merge All Notes with Claude'}
           </button>
         : <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
             <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,width:'100%',maxWidth:640,maxHeight:'80vh',overflow:'auto',padding:28}}>
@@ -1803,31 +1803,63 @@ function TranscriptImport({ selCand, setCandidates }) {
 }
 
 
-function renderNoteGroups(interviewNotes, removeNote) {
+function renderNoteGroups(interviewNotes, removeNote, onCleanGroup) {
   const notes = [...interviewNotes].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   const groups = {};
   notes.forEach(n => {
-    const d = n.savedAt ? n.savedAt.split(',')[0] + (n.savedAt.includes('Cleaned') ? ' (AI Cleaned)' : '') : (n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Notes');
+    const d = n.savedAt
+      ? n.savedAt.includes('Cleaned') ? n.savedAt : n.savedAt.split(',').slice(0,2).join(',')
+      : n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Notes';
     if (!groups[d]) groups[d] = [];
     groups[d].push(n);
   });
+
   return Object.entries(groups).map(([date, groupNotes]) => (
-    React.createElement('div', {key:date, className:'mb-4'},
-      React.createElement('div', {style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid var(--border)'}}, date),
-      groupNotes.map(n=>
-        React.createElement('div', {key:n.id, style:{marginBottom:12,paddingBottom:12,borderBottom:'1px solid var(--border)'}},
-          React.createElement('div', {className:'flex items-center justify-between mb-1'},
-            React.createElement('span', {style:{fontSize:10,color:'var(--muted)',fontFamily:'var(--mono)'}}, n.savedAt||''),
-            React.createElement('button', {className:'btn btn-ghost btn-xs', onClick:()=>removeNote(n.id)}, '✕')
-          ),
-          React.createElement('div', {style:{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap'}}, 
-            n.star ? React.createElement(React.Fragment, null, React.createElement('span', {className:'note-star'}, '⭐ '), n.text) : n.text
+    React.createElement('div', {key:date, style:{marginBottom:20,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}},
+      // Group header
+      React.createElement('div', {style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid var(--border)',background:'var(--surface3)'}},
+        React.createElement('span', {style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em'}}, date),
+        React.createElement('div', {style:{display:'flex',gap:6,alignItems:'center'}},
+          React.createElement('span', {style:{fontSize:11,color:'var(--muted)'}}, groupNotes.length + ' note' + (groupNotes.length!==1?'s':'')),
+          onCleanGroup && React.createElement('button', {
+            className:'btn btn-purple btn-xs',
+            onClick:()=>onCleanGroup(groupNotes, date),
+            style:{fontSize:10,padding:'3px 8px'}
+          }, '✨ Clean')
+        )
+      ),
+      // Notes content - all notes in group as one readable block
+      React.createElement('div', {style:{padding:'14px 16px'}},
+        groupNotes.map((n,i) =>
+          React.createElement('div', {
+            key:n.id,
+            style:{
+              marginBottom: i < groupNotes.length-1 ? 12 : 0,
+              paddingBottom: i < groupNotes.length-1 ? 12 : 0,
+              borderBottom: i < groupNotes.length-1 ? '1px solid var(--border)' : 'none',
+              position:'relative'
+            }
+          },
+            React.createElement('div', {
+              style:{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap',paddingRight:28,color:'var(--text)'}
+            },
+              n.star ? React.createElement(React.Fragment, null,
+                React.createElement('span', {style:{color:'var(--yellow)'}}, '⭐ '),
+                n.text
+              ) : n.text
+            ),
+            React.createElement('button', {
+              onClick:()=>removeNote(n.id),
+              style:{position:'absolute',top:0,right:0,background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14,padding:'2px 4px',lineHeight:1},
+              title:'Delete note'
+            }, '×')
           )
         )
       )
     )
   ));
 }
+
 
 /* ═══════════════════════════════════════
    INTERVIEW NOTES
@@ -1892,26 +1924,24 @@ function InterviewsView({ candidates, setCandidates, positions }) {
             style={{minHeight:70}} value={noteInput}
             onChange={e=>setNoteInput(e.target.value)}
             onPaste={e=>{
-              const text = e.clipboardData.getData('text');
-              if (!text) return;
-              if (text.length > 200) {
-                // Long paste — split into individual notes by line
-                e.preventDefault();
-                const lines = text.split('\n').filter(l=>l.trim().length > 0);
-                if (lines.length > 1) {
+              // Let paste appear in textarea naturally
+              // After short delay, if multi-line auto-save each line as a note
+              setTimeout(()=>{
+                const val = e.target.value;
+                if (!val) return;
+                const lines = val.split('\n').filter(l=>l.trim().length > 0);
+                if (lines.length > 2) {
+                  const now2 = new Date();
+                  const savedAt2 = now2.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
                   lines.forEach((line,i) => {
                     setTimeout(()=>{
-                      const note = { id:uid(), text:line.trim(), time:fmtTime(elapsed), star:false, createdAt:new Date().toISOString() };
+                      const note = { id:uid(), text:line.trim(), time:'', star:false, createdAt:now2.toISOString(), savedAt:savedAt2 };
                       setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
                     }, i*10);
                   });
                   setNoteInput('');
-                } else {
-                  // Single long line — just paste into box
-                  setNoteInput(n => n + text);
                 }
-              }
-              // Short paste — let it go into the textarea normally (don't preventDefault)
+              }, 200);
             }}
             onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
             onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
@@ -1951,7 +1981,26 @@ function InterviewsView({ candidates, setCandidates, positions }) {
         <div className="card">
           <div className="section-title">Interview Timeline ({(cand.interviewNotes||[]).length} notes)</div>
           {(cand.interviewNotes||[]).length===0 && <div className="text-muted text-sm">No notes yet. Start the timer and take notes above.</div>}
-          {renderNoteGroups(cand.interviewNotes||[], removeNote)}
+          {renderNoteGroups(cand.interviewNotes||[], removeNote, async (groupNotes, groupDate) => {
+            const PROXY = 'https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy';
+            const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
+            const rawText = groupNotes.map(n=>n.text).join(' | ');
+            try {
+              const resp = await fetch(PROXY, {
+                method:'POST',
+                headers:{'Content-Type':'application/json','Authorization':'Bearer '+ANON},
+                body:JSON.stringify({prompt:'Clean up and organize these interview notes into clear readable prose. Fix typos, group related points: ' + rawText, max_tokens:800})
+              });
+              const data = await resp.json();
+              if (data.text) {
+                const now2 = new Date();
+                const savedAt2 = 'Cleaned ' + now2.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+                const cleanedNote = {id:uid(),text:data.text,time:'',star:true,createdAt:now2.toISOString(),savedAt:savedAt2};
+                const oldIds = groupNotes.map(n=>n.id);
+                setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]).filter(n=>!oldIds.includes(n.id)),cleanedNote]}:c));
+              }
+            } catch(e) { alert('Could not clean notes: ' + e.message); }
+          })}
         </div>
       </>}
     </div>
