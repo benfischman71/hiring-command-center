@@ -2520,6 +2520,7 @@ function App() {
   const [view, setView] = useState('dashboard');
   const [filterPos, setFilterPos] = useState('all');
   const [showProfile, setShowProfile] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
   const [positions, setPositionsState] = useState([]);
   const [candidates, setCandidatesState] = useState([]);
   const [requirements, setRequirementsState] = useState(DEFAULT_REQUIREMENTS);
@@ -2530,15 +2531,45 @@ function App() {
 
   // Data persistence handled in setters above
 
+  // Refresh data from Supabase when app comes back into focus
+  useEffect(()=>{
+    if (DEMO_MODE || !supabase) return;
+    const refreshData = async () => {
+      if (!user) return;
+      try {
+        const { data: appData, error: refreshErr } = await supabase.from('app_data').select('*').eq('org_id', user.orgId);
+      if (refreshErr) { console.error('Refresh error:', refreshErr); setSyncStatus('error'); return; }
+        if (!appData) return;
+        const pos = appData.find(d=>d.data_type==='positions');
+        const cand = appData.find(d=>d.data_type==='candidates');
+        const req = appData.find(d=>d.data_type==='requirements');
+        if (pos?.data) setPositionsState(pos.data);
+        if (cand?.data) setCandidatesState(cand.data);
+        if (req?.data) setRequirementsState(req.data);
+      } catch(e) { console.warn('Refresh error:', e); }
+    };
+    // Refresh when tab becomes visible
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshData(); });
+    // Refresh every 30 seconds while active
+    const interval = setInterval(refreshData, 30000);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshData);
+    };
+  }, [user]);
+
   // Save to Supabase as JSON blob
   const syncToSupabase = async (dataType, data, orgId) => {
     if (DEMO_MODE || !supabase || !orgId) return;
     try {
-      await supabase.from('app_data').upsert(
+      setSyncStatus('syncing');
+      const { error } = await supabase.from('app_data').upsert(
         { org_id: orgId, data_type: dataType, data: data, updated_at: new Date().toISOString() },
         { onConflict: 'org_id,data_type' }
       );
-    } catch(e) { console.warn('Sync error:', e); }
+      if (error) { setSyncStatus('error'); console.error('Sync error:', error); }
+      else { setSyncStatus('synced'); setTimeout(()=>setSyncStatus(''), 3000); }
+    } catch(e) { setSyncStatus('error'); console.warn('Sync error:', e); }
   };
 
   const setPositions = (fn) => {
@@ -2747,10 +2778,13 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-brand">
           <div>
-            <div className="sidebar-brand-name">Hiring CC</div>
-            <div className="sidebar-org">{org?.name||'My Organization'}</div>
+            <div className="sidebar-brand-name">Hiring CC {syncStatus==='syncing'?'⏳':syncStatus==='synced'?'✓':syncStatus==='error'?'⚠️':''}</div>
+            <div className="sidebar-org">{org?.name||'My Organization'}{syncStatus==='synced'?' · Synced':syncStatus==='syncing'?' · Syncing...':''}</div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
+            {syncStatus==='syncing' && <span style={{fontSize:10,color:'var(--yellow)',fontWeight:600}}>⏳ Syncing...</span>}
+            {syncStatus==='synced' && <span style={{fontSize:10,color:'var(--accent3)',fontWeight:600}}>✓ Synced</span>}
+            {syncStatus==='error' && <span style={{fontSize:10,color:'var(--red)',fontWeight:600}}>⚠️ Sync error</span>}
             <div className="user-avatar" style={{width:30,height:30,fontSize:12,cursor:'pointer'}} onClick={()=>setShowProfile(true)}>{initials}</div>
           </div>
         </div>
