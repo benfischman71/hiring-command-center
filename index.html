@@ -952,8 +952,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
             const savedAt = now.toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
             const newNote = c.quickNote ? [{ id:uid(), text:c.quickNote.trim(), time:'', star:false, createdAt:now.toISOString(), savedAt }] : [];
             const {quickNote, ...rest} = c;
-            const existing = candidates.find(x=>x.id===c.id);
-            setCandidates(cs=>cs.map(x=>x.id===c.id?{...rest, interviewNotes:[...(existing?.interviewNotes||[]),...newNote]}:x));
+            setCandidates(cs=>cs.map(x=>x.id===c.id?{...rest, interviewNotes:[...(x.interviewNotes||[]),...newNote]}:x));
           }
           else {
             const now = new Date();
