@@ -2848,7 +2848,8 @@ function App() {
       <div className="sidebar">
         <div className="sidebar-brand">
           <div>
-            <div className="sidebar-brand-name">Hiring CC {syncStatus==='syncing'?'⏳':syncStatus==='synced'?'✓':syncStatus==='error'?'⚠️':''}</div>
+            <div className="sidebar-brand-name">HCC {syncStatus==='syncing'?'⏳':syncStatus==='synced'?'✓':syncStatus==='error'?'⚠️':''}</div>
+            <div style={{fontSize:10,color:'var(--muted)',marginTop:1}}>Hiring Command Center</div>
             <div className="sidebar-org">{org?.name||'My Organization'}{syncStatus==='synced'?' · Synced':syncStatus==='syncing'?' · Syncing...':''}</div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
