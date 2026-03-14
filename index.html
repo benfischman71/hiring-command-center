@@ -780,9 +780,7 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({
-                      prompt:'The following may be raw or garbled text from a PDF. Please clean it up into a readable job description. Remove any PDF artifacts or binary characters. Return only the cleaned text.
-
-' + form.jd.slice(0,4000)
+                      prompt:'Clean up this text into a readable job description. Remove PDF artifacts and binary characters. Return only clean text: ' + form.jd.slice(0,4000)
                     })
                   });
                   const data = await response.json();
