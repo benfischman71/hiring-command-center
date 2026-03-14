@@ -558,7 +558,7 @@ function AuthScreen({ onAuth }) {
 /* ═══════════════════════════════════════
    DASHBOARD
    ═══════════════════════════════════════ */
-function Dashboard({ user, org, positions, candidates }) {
+function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) {
   const open = positions.filter(p=>p.status==='Open').length;
   const total = candidates.length;
   const active = candidates.filter(c=>!['Hired','Rejected'].includes(c.stage)).length;
@@ -582,12 +582,18 @@ function Dashboard({ user, org, positions, candidates }) {
           <div className="section-title">Open Positions</div>
           {positions.filter(p=>p.status==='Open').length===0 && <div className="text-muted text-sm">No open positions yet.</div>}
           {positions.filter(p=>p.status==='Open').slice(0,5).map(p=>(
-            <div key={p.id} className="flex items-center justify-between" style={{padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+            <div key={p.id} className="flex items-center justify-between" style={{padding:'10px 0',borderBottom:'1px solid var(--border)',cursor:'pointer'}}
+              onClick={()=>{setFilterPos&&setFilterPos(p.id);setView('candidates');}}
+              onMouseEnter={e=>e.currentTarget.style.opacity='.7'}
+              onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
               <div>
-                <div style={{fontWeight:600,fontSize:13}}>{p.title}</div>
+                <div style={{fontWeight:600,fontSize:13,color:'var(--accent)'}}>{p.title}</div>
                 <div className="text-muted text-xs mt-1">{p.department} · {candidates.filter(c=>c.positionId===p.id).length} candidates</div>
               </div>
-              <span className="badge badge-green">Open</span>
+              <div className="flex items-center gap-2">
+                <span className="badge badge-green">Open</span>
+                <span style={{color:'var(--muted)',fontSize:12}}>→</span>
+              </div>
             </div>
           ))}
         </div>
@@ -862,11 +868,12 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
 /* ═══════════════════════════════════════
    CANDIDATES
    ═══════════════════════════════════════ */
-function CandidatesView({ candidates, setCandidates, positions }) {
+function CandidatesView({ candidates, setCandidates, positions, initialFilter, onFilterUsed }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [filterPos, setFilterPos] = useState('all');
+  const [filterPos, setFilterPos] = useState(initialFilter||'all');
   const [filterStage, setFilterStage] = useState('all');
+  useEffect(()=>{ if(initialFilter&&initialFilter!=='all'){setFilterPos(initialFilter);onFilterUsed&&onFilterUsed();} },[initialFilter]);
 
   const filtered = candidates.filter(c=>
     (filterPos==='all'||c.positionId===filterPos) &&
@@ -1922,6 +1929,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);
   const [view, setView] = useState('dashboard');
+  const [filterPos, setFilterPos] = useState('all');
   const [positions, setPositionsState] = useState([]);
   const [candidates, setCandidatesState] = useState([]);
   const [requirements, setRequirementsState] = useState(DEFAULT_REQUIREMENTS);
@@ -2012,9 +2020,9 @@ function App() {
 
   const renderView = () => {
     switch(view) {
-      case 'dashboard': return <Dashboard user={user} org={org} positions={positions} candidates={candidates}/>;
+      case 'dashboard': return <Dashboard user={user} org={org} positions={positions} candidates={candidates} setView={setView} setFilterPos={setFilterPos}/>;
       case 'positions': return <PositionsView positions={positions} setPositions={setPositions} requirements={requirements} candidates={candidates}/>;
-      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions} initialFilter={filterPos} onFilterUsed={()=>setFilterPos('all')}/>;
       case 'scorecards': return <ScorecardsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'references': return <ReferenceChecksView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
