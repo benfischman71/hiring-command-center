@@ -264,6 +264,127 @@ tr:hover td{background:var(--surface2)}
   border-radius:10px;padding:14px 16px}
 .pulse{animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── MOBILE RESPONSIVE ───────────────────────── */
+@media (max-width: 768px) {
+  .app { flex-direction: column; height: auto; min-height: 100vh; }
+
+  .sidebar {
+    width: 100%;
+    min-width: unset;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface);
+  }
+
+  .sidebar-brand { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+
+  /* Horizontal scrolling nav on mobile */
+  .nav-section {
+    display: flex;
+    overflow-x: auto;
+    padding: 8px 8px;
+    gap: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav-section::-webkit-scrollbar { display: none; }
+
+  .nav-item {
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    background: var(--surface2);
+    white-space: nowrap;
+    width: auto;
+  }
+  .nav-item.active { background: rgba(79,142,247,.2); color: var(--accent); }
+  .nav-item .nav-icon { font-size: 13px; }
+
+  /* Move user pill into brand bar on mobile */
+  .sidebar-footer { 
+    display: none;
+  }
+
+  .main { 
+    flex: 1;
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page { padding: 16px; max-width: 100%; }
+  .page-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .page-title { font-size: 20px; }
+
+  .grid-2 { grid-template-columns: 1fr; gap: 12px; }
+  .grid-3 { grid-template-columns: 1fr; gap: 12px; }
+
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 22px; }
+
+  .modal { 
+    max-width: 100%; 
+    margin: 0; 
+    border-radius: 20px 20px 0 0; 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-lg { max-width: 100%; }
+  .modal-header { padding: 20px 20px 0; }
+  .modal-body { padding: 16px 20px 20px; }
+  .modal-footer { padding: 0 20px 20px; }
+
+  table { font-size: 12px; }
+  th, td { padding: 8px 8px; }
+
+  .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .tab { white-space: nowrap; flex-shrink: 0; padding: 8px 12px; font-size: 12px; }
+
+  .score-btns .score-btn { width: 34px; height: 34px; font-size: 12px; }
+
+  .btn { padding: 9px 14px; font-size: 13px; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-full { width: 100%; justify-content: center; }
+
+  .hide-mobile { display: none !important; }
+
+  .card { padding: 14px; }
+
+  .share-code { font-size: 11px; }
+  
+  .compare-table th, .compare-table td { padding: 8px 10px; font-size: 12px; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .auth-card { padding: 28px 20px; border-radius: 20px 20px 0 0; position: fixed; bottom: 0; left: 0; right: 0; max-width: 100%; }
+  .auth-bg { align-items: flex-end; }
+}
+
+/* ── DESKTOP ENHANCEMENTS ────────────────────── */
+@media (min-width: 1200px) {
+  .page { max-width: 1400px; }
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+}
 </style>
 </head>
 <body>
@@ -272,7 +393,7 @@ tr:hover td{background:var(--surface2)}
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
-/* v2.1 */
+/* v1773462538 */
 /* ═══════════════════════════════════════
    CONFIG  — replace with your Supabase credentials
    ═══════════════════════════════════════ */
@@ -567,7 +688,7 @@ function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) 
     <div className="page">
       <div className="page-header">
         <div>
-          <div className="page-title">Good to see you, {user.name.split(' ')[0]} 👋</div>
+          <div className="page-title">{new Date().getHours()<12?'Good morning':new Date().getHours()<17?'Good afternoon':'Good evening'}, {user.name.split(' ')[0]} {new Date().getHours()<12?'☀️':new Date().getHours()<17?'👋':'🌙'}</div>
           <div className="page-sub">{org?.name} · Hiring Dashboard</div>
         </div>
       </div>
@@ -659,8 +780,8 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
                     <td><span className={`badge ${p.status==='Open'?'badge-green':'badge-gray'}`}>{p.status}</span></td>
                     <td>
                       <div className="flex gap-2">
-                        <button className="btn btn-ghost btn-sm" onClick={()=>{setEditing(p);setShowModal(true)}}>Edit</button>
-                        <button className="btn btn-danger btn-sm" onClick={()=>setPositions(ps=>ps.filter(x=>x.id!==p.id))}>Delete</button>
+                        <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>{setEditing(p);setShowModal(true)}}>✏️ Edit</button>
+                        <button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:11}} onClick={()=>{if(window.confirm('Delete this position?'))setPositions(ps=>ps.filter(x=>x.id!==p.id))}}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -913,7 +1034,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
         ? <div className="empty-state"><div className="empty-icon">👤</div><div className="empty-title">No candidates yet</div><div className="empty-sub">Add candidates to start evaluating.</div></div>
         : <div className="card" style={{padding:0}}>
             <div className="table-wrap"><table>
-              <thead><tr><th>Name</th><th>Position</th><th>Stage</th><th>Score</th><th>Added</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Position</th><th>Stage</th><th>Score</th><th className="hide-mobile">Added</th><th></th></tr></thead>
               <tbody>
                 {filtered.map(c=>{
                   const pos = positions.find(p=>p.id===c.positionId);
@@ -923,10 +1044,10 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                     <td>{pos?.title||'—'}</td>
                     <td><span className={`badge ${STAGE_COLORS[c.stage]||'badge-gray'}`}>{c.stage}</span></td>
                     <td style={{minWidth:140}}><ScoreBar score={score}/></td>
-                    <td className="text-muted">{fmtDate(c.createdAt)}</td>
+                    <td className="text-muted hide-mobile">{fmtDate(c.createdAt)}</td>
                     <td>
                       <div className="flex gap-2">
-                        <button className="btn btn-ghost btn-sm" onClick={()=>{setEditing(c);setShowModal(true)}}>Edit</button>
+                        <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>{setEditing(c);setShowModal(true)}}>✏️ Edit</button>
                         <select className="btn btn-ghost btn-sm" style={{cursor:'pointer',maxWidth:130,fontSize:12}}
                           value={c.positionId}
                           onChange={e=>setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,positionId:e.target.value,scores:{}}:x))}
@@ -1050,7 +1171,8 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
             <div className="field"><label>Phone</label><input placeholder="+1 (555) 000-0000" value={form.phone||''} onChange={e=>update('phone',e.target.value)}/></div>
             <div className="field"><label>LinkedIn URL</label><input placeholder="linkedin.com/in/..." value={form.linkedIn||''} onChange={e=>update('linkedIn',e.target.value)}/></div>
           </div>
-          <div className="field"><label>Notes</label><textarea placeholder="Initial impressions, source, etc." value={form.notes||''} onChange={e=>update('notes',e.target.value)}/></div>
+          <div className="field"><label>General Notes</label><textarea placeholder="Initial impressions, source, etc." value={form.notes||''} onChange={e=>update('notes',e.target.value)}/></div>
+
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
@@ -1464,6 +1586,71 @@ ${form.requirements.map(r=>`• ${r.name}`).join('\n')}`;
 }
 
 /* ═══════════════════════════════════════
+   CLEANUP NOTES BUTTON
+   ═══════════════════════════════════════ */
+function CleanupNotesButton({ selCand, setCandidates, candidates }) {
+  const [loading, setLoading] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [summary, setSummary] = useState('');
+
+  const PROXY = 'https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
+
+  const cand = candidates.find(c=>c.id===selCand);
+  const notes = (cand?.interviewNotes||[]).map(n=>n.text).join(' | ');
+
+  const cleanup = async () => {
+    if (!notes.trim()) return;
+    setLoading(true);
+    try {
+      const resp = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({
+          prompt: 'Organize these interview notes into clean readable prose: ' + notes.slice(0, 5000),
+          max_tokens: 1500
+        })
+      });
+      const data = await resp.json();
+      setSummary(data.text || 'Could not generate summary.');
+      setShowSummary(true);
+    } catch(e) {
+      setSummary('Error: ' + e.message);
+      setShowSummary(true);
+    }
+    setLoading(false);
+  };
+
+  const saveAsSummary = () => {
+    const now = new Date();
+    const cleanedNote = { id: uid(), text: summary, time: 'cleaned', star: true, createdAt: now.toISOString(), savedAt: 'Cleaned up ' + now.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true}) };
+    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c, interviewNotes:[cleanedNote]}:c));
+    setShowSummary(false);
+  };
+
+  return (
+    <div style={{textAlign:'right'}}>
+      {!showSummary
+        ? <button className="btn btn-purple btn-sm" onClick={cleanup} disabled={loading||!notes.trim()}>
+            {loading?'⏳ Organizing...':'✨ Clean up Notes with Claude'}
+          </button>
+        : <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:16,width:'100%',maxWidth:640,maxHeight:'80vh',overflow:'auto',padding:28}}>
+              <div style={{fontWeight:700,fontSize:16,marginBottom:16}}>✨ Cleaned Up Notes</div>
+              <textarea style={{minHeight:300,fontSize:13,lineHeight:1.8,width:'100%'}} value={summary} onChange={e=>setSummary(e.target.value)}/>
+              <div className="flex gap-2 mt-3">
+                <button className="btn btn-primary" onClick={saveAsSummary}>Replace Notes with This</button>
+                <button className="btn btn-secondary" onClick={()=>navigator.clipboard.writeText(summary)}>📋 Copy</button>
+                <button className="btn btn-ghost" onClick={()=>setShowSummary(false)}>Close</button>
+              </div>
+            </div>
+          </div>
+      }
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
    TRANSCRIPT IMPORT
    ═══════════════════════════════════════ */
 function TranscriptImport({ selCand, setCandidates }) {
@@ -1570,6 +1757,33 @@ function TranscriptImport({ selCand, setCandidates }) {
   );
 }
 
+
+function renderNoteGroups(interviewNotes, removeNote) {
+  const notes = [...interviewNotes].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const groups = {};
+  notes.forEach(n => {
+    const d = n.savedAt ? n.savedAt.split(',')[0] + (n.savedAt.includes('Cleaned') ? ' (AI Cleaned)' : '') : (n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Notes');
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(n);
+  });
+  return Object.entries(groups).map(([date, groupNotes]) => (
+    React.createElement('div', {key:date, className:'mb-4'},
+      React.createElement('div', {style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid var(--border)'}}, date),
+      groupNotes.map(n=>
+        React.createElement('div', {key:n.id, style:{marginBottom:12,paddingBottom:12,borderBottom:'1px solid var(--border)'}},
+          React.createElement('div', {className:'flex items-center justify-between mb-1'},
+            React.createElement('span', {style:{fontSize:10,color:'var(--muted)',fontFamily:'var(--mono)'}}, n.savedAt||''),
+            React.createElement('button', {className:'btn btn-ghost btn-xs', onClick:()=>removeNote(n.id)}, '✕')
+          ),
+          React.createElement('div', {style:{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap'}}, 
+            n.star ? React.createElement(React.Fragment, null, React.createElement('span', {className:'note-star'}, '⭐ '), n.text) : n.text
+          )
+        )
+      )
+    )
+  ));
+}
+
 /* ═══════════════════════════════════════
    INTERVIEW NOTES
    ═══════════════════════════════════════ */
@@ -1593,7 +1807,8 @@ function InterviewsView({ candidates, setCandidates, positions }) {
 
   const addNote = (star=false) => {
     if (!noteInput.trim()||!selCand) return;
-    const note = { id:uid(), text:noteInput.trim(), time:fmtTime(elapsed), star, createdAt:new Date().toISOString() };
+    const now = new Date();
+    const note = { id:uid(), text:noteInput.trim(), time:fmtTime(elapsed), star, createdAt:now.toISOString(), savedAt:now.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true}) };
     setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
     setNoteInput('');
   };
@@ -1622,15 +1837,7 @@ function InterviewsView({ candidates, setCandidates, positions }) {
               <div style={{fontWeight:700,fontSize:18}}>{cand.name}</div>
               <div className="text-muted text-sm">{pos?.title}</div>
             </div>
-            <div style={{textAlign:'center'}}>
-              <div className="timer-display">{fmtTime(elapsed)}</div>
-              <div className="flex gap-2 mt-2">
-                <button className={`btn btn-sm ${running?'btn-danger':'btn-green'}`} onClick={()=>setRunning(r=>!r)}>
-                  {running?'⏸ Pause':'▶ Start Timer'}
-                </button>
-                <button className="btn btn-secondary btn-sm" onClick={()=>{setRunning(false);setElapsed(0)}}>↺ Reset</button>
-              </div>
-            </div>
+            <CleanupNotesButton selCand={selCand} setCandidates={setCandidates} candidates={candidates}/>
           </div>
         </div>
 
@@ -1641,18 +1848,25 @@ function InterviewsView({ candidates, setCandidates, positions }) {
             onChange={e=>setNoteInput(e.target.value)}
             onPaste={e=>{
               const text = e.clipboardData.getData('text');
-              if (text && text.length > 200) {
+              if (!text) return;
+              if (text.length > 200) {
+                // Long paste — split into individual notes by line
                 e.preventDefault();
-                // Long paste — split into multiple notes by line
-                const lines = text.split('\n').filter(l=>l.trim());
-                lines.forEach((line,i) => {
-                  setTimeout(()=>{
-                    const note = { id:uid(), text:line.trim(), time:'0:00', star:false, createdAt:new Date().toISOString() };
-                    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
-                  }, i*10);
-                });
-                setNoteInput('');
+                const lines = text.split('\n').filter(l=>l.trim().length > 0);
+                if (lines.length > 1) {
+                  lines.forEach((line,i) => {
+                    setTimeout(()=>{
+                      const note = { id:uid(), text:line.trim(), time:fmtTime(elapsed), star:false, createdAt:new Date().toISOString() };
+                      setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),note]}:c));
+                    }, i*10);
+                  });
+                  setNoteInput('');
+                } else {
+                  // Single long line — just paste into box
+                  setNoteInput(n => n + text);
+                }
               }
+              // Short paste — let it go into the textarea normally (don't preventDefault)
             }}
             onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
             onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
@@ -1692,15 +1906,110 @@ function InterviewsView({ candidates, setCandidates, positions }) {
         <div className="card">
           <div className="section-title">Interview Timeline ({(cand.interviewNotes||[]).length} notes)</div>
           {(cand.interviewNotes||[]).length===0 && <div className="text-muted text-sm">No notes yet. Start the timer and take notes above.</div>}
-          {(cand.interviewNotes||[]).map(n=>(
-            <div key={n.id} className="note-item">
-              <div className="note-time">{n.time}</div>
-              <div className="note-text">{n.star && <span className="note-star">⭐ </span>}{n.text}</div>
-              <button className="btn btn-ghost btn-xs" onClick={()=>removeNote(n.id)}>✕</button>
-            </div>
-          ))}
+          {renderNoteGroups(cand.interviewNotes||[], removeNote)}
         </div>
       </>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   REFERENCE NOTE INPUT (inline)
+   ═══════════════════════════════════════ */
+function RefNoteInput({ refId, candId, setCandidates }) {
+  const [note, setNote] = useState('');
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const PROXY = 'https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
+
+  const addNotesToRef = (newNotes) => {
+    setCandidates(cs => cs.map(c => {
+      if (c.id !== candId) return c;
+      return { ...c, ref_checks: (c.ref_checks||[]).map(r =>
+        r.id === refId ? { ...r, notes: (r.notes ? r.notes + ' | ' : '') + newNotes } : r
+      )};
+    }));
+  };
+
+  const saveNote = () => {
+    if (!note.trim()) return;
+    addNotesToRef(note.trim());
+    setNote('');
+  };
+
+  const parseTranscript = async () => {
+    if (!transcript.trim()) return;
+    setLoading(true);
+    try {
+      const resp = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({
+          prompt: 'Extract 5-8 key insights from this reference call transcript. Focus on strengths, weaknesses, working style, and any red flags. Return a plain text summary with each point on a new line starting with a bullet •. No JSON, just bullet points. Transcript: ' + transcript.slice(0, 5000),
+          max_tokens: 800
+        })
+      });
+      const data = await resp.json();
+      addNotesToRef(data.text || transcript);
+    } catch(e) {
+      addNotesToRef(transcript);
+    }
+    setTranscript(''); setShowTranscript(false); setLoading(false);
+  };
+
+  return (
+    <div className="mt-3" style={{borderTop:'1px solid var(--border)',paddingTop:12}}>
+      <div className="section-title mb-2">Add Notes</div>
+      <textarea
+        style={{minHeight:60,fontSize:12,marginBottom:6}}
+        placeholder="Type or paste notes... drag a .txt file to import"
+        value={note}
+        onChange={e=>setNote(e.target.value)}
+        onPaste={e=>{
+          const text = e.clipboardData.getData('text');
+          if (text && text.length > 300) { e.preventDefault(); addNotesToRef(text); }
+        }}
+        onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+        onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+        onDrop={e=>{
+          e.preventDefault(); e.currentTarget.style.borderColor='';
+          const file = e.dataTransfer.files[0];
+          if (file) { const r=new FileReader(); r.onload=ev=>addNotesToRef(ev.target.result); r.readAsText(file); }
+          else { const t=e.dataTransfer.getData('text'); if(t) setNote(n=>n+t); }
+        }}
+        onKeyDown={e=>{ if(e.key==='Enter'&&e.metaKey){e.preventDefault();saveNote();} }}/>
+      <div className="flex gap-2" style={{flexWrap:'wrap'}}>
+        <button className="btn btn-primary btn-sm" onClick={saveNote} disabled={!note.trim()}>Save Note</button>
+        <button className="btn btn-secondary btn-sm" onClick={()=>setShowTranscript(s=>!s)}>
+          {showTranscript?'Cancel':'🎙️ Import Call Transcript'}
+        </button>
+      </div>
+      {showTranscript && <div className="mt-3">
+        <textarea
+          style={{minHeight:120,fontSize:12,marginBottom:6}}
+          placeholder="Paste the reference call transcript or recording transcript here. Claude will extract key insights..."
+          value={transcript}
+          onChange={e=>setTranscript(e.target.value)}
+          onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+          onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+          onDrop={e=>{
+            e.preventDefault(); e.currentTarget.style.borderColor='';
+            const file=e.dataTransfer.files[0];
+            if(file){const r=new FileReader();r.onload=ev=>setTranscript(ev.target.result);r.readAsText(file);}
+            else{const t=e.dataTransfer.getData('text');if(t)setTranscript(t);}
+          }}/>
+        <div className="flex gap-2">
+          <button className="btn btn-purple btn-sm" onClick={parseTranscript} disabled={loading||!transcript.trim()}>
+            {loading?'⏳ Extracting...':'✨ Extract Insights with Claude'}
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={()=>{addNotesToRef(transcript);setTranscript('');setShowTranscript(false);}} disabled={!transcript.trim()}>
+            Import as-is
+          </button>
+        </div>
+      </div>}
     </div>
   );
 }
@@ -1765,8 +2074,9 @@ function ReferenceChecksView({ candidates, setCandidates, positions }) {
                 <div className="info-row"><span className="info-key">Overall Rating</span><span className="info-val">{ref.rating?`${ref.rating}/5`:'—'}</span></div>
                 <div className="info-row"><span className="info-key">Would Rehire?</span><span className="info-val" style={{color:ref.wouldRehire==='Yes'?'var(--accent3)':ref.wouldRehire==='No'?'var(--red)':'var(--muted)'}}>{ref.wouldRehire||'—'}</span></div>
               </div>
-              {ref.notes && <div className="mt-2 text-sm">{ref.notes}</div>}
+              {ref.notes && <div className="mt-2 text-sm" style={{whiteSpace:'pre-wrap'}}>{ref.notes}</div>}
               {ref.redFlags && <div className="mt-2 p-2 rounded" style={{background:'rgba(247,92,92,.08)',border:'1px solid rgba(247,92,92,.2)',fontSize:12,color:'var(--red)'}}>🚩 {ref.redFlags}</div>}
+              <RefNoteInput refId={ref.id} candId={selCand} setCandidates={setCandidates}/>
             </>}
           </div>
         ))}
@@ -2091,6 +2401,85 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
 }
 
 /* ═══════════════════════════════════════
+   ADMIN VIEW
+   ═══════════════════════════════════════ */
+function AdminView({ user }) {
+  const [users, setUsers] = useState([]);
+  const [orgs, setOrgs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const isAdmin = user.role === 'owner' || user.email === 'ben@tradecoffeeco.com';
+
+  useEffect(() => {
+    if (!isAdmin) { setLoading(false); return; }
+    if (DEMO_MODE) {
+      const u = storage.get('hcc_users', []);
+      const o = storage.get('hcc_orgs', []);
+      setUsers(u);
+      setOrgs(o);
+      setLoading(false);
+    } else {
+      Promise.all([
+        supabase.from('profiles').select('*').order('created_at', {ascending:false}),
+        supabase.from('organizations').select('*').order('created_at', {ascending:false})
+      ]).then(([{data:u},{data:o}]) => {
+        setUsers(u||[]);
+        setOrgs(o||[]);
+        setLoading(false);
+      });
+    }
+  }, []);
+
+  if (!isAdmin) {
+    return <div className="page"><div className="empty-state"><div className="empty-icon">🔐</div><div className="empty-title">Admin access only</div></div></div>;
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">🔐 Admin Panel</div><div className="page-sub">All organizations and users</div></div>
+      </div>
+      {loading ? <div className="text-muted">Loading...</div> : <>
+        <div className="card mb-4">
+          <div className="section-title">Organizations ({orgs.length})</div>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Organization</th><th>ID</th><th>Created</th></tr></thead>
+            <tbody>
+              {orgs.map(o=>(
+                <tr key={o.id}>
+                  <td style={{fontWeight:600}}>{o.name}</td>
+                  <td className="text-muted" style={{fontFamily:'var(--mono)',fontSize:11}}>{o.id}</td>
+                  <td className="text-muted">{fmtDate(o.created_at||o.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table></div>
+        </div>
+        <div className="card">
+          <div className="section-title">Users ({users.length})</div>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Org</th><th>Joined</th></tr></thead>
+            <tbody>
+              {users.map(u=>{
+                const org = orgs.find(o=>o.id===(u.org_id||u.orgId));
+                return (
+                  <tr key={u.id}>
+                    <td style={{fontWeight:600}}>{u.name}</td>
+                    <td>{u.email}</td>
+                    <td><span className={`badge ${u.role==='owner'?'badge-purple':'badge-blue'}`}>{u.role}</span></td>
+                    <td className="text-muted">{org?.name||'—'}</td>
+                    <td className="text-muted">{fmtDate(u.created_at||u.createdAt)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table></div>
+        </div>
+      </>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
    MAIN APP
    ═══════════════════════════════════════ */
 function App() {
@@ -2098,6 +2487,7 @@ function App() {
   const [org, setOrg] = useState(null);
   const [view, setView] = useState('dashboard');
   const [filterPos, setFilterPos] = useState('all');
+  const [showProfile, setShowProfile] = useState(false);
   const [positions, setPositionsState] = useState([]);
   const [candidates, setCandidatesState] = useState([]);
   const [requirements, setRequirementsState] = useState(DEFAULT_REQUIREMENTS);
@@ -2106,14 +2496,43 @@ function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const scorecardId = urlParams.get('scorecard');
 
-  // Persist to localStorage
-  useEffect(()=>{ if(user) localStorage.setItem('hcc_positions_'+user.orgId, JSON.stringify(positions)); },[positions,user]);
-  useEffect(()=>{ if(user) localStorage.setItem('hcc_candidates_'+user.orgId, JSON.stringify(candidates)); },[candidates,user]);
-  useEffect(()=>{ if(user) localStorage.setItem('hcc_requirements_'+user.orgId, JSON.stringify(requirements)); },[requirements,user]);
+  // Data persistence handled in setters above
 
-  const setPositions = (fn) => setPositionsState(fn);
-  const setCandidates = (fn) => setCandidatesState(fn);
-  const setRequirements = (fn) => setRequirementsState(fn);
+  // Save to Supabase as JSON blob
+  const syncToSupabase = async (dataType, data, orgId) => {
+    if (DEMO_MODE || !supabase || !orgId) return;
+    try {
+      await supabase.from('app_data').upsert(
+        { org_id: orgId, data_type: dataType, data: data, updated_at: new Date().toISOString() },
+        { onConflict: 'org_id,data_type' }
+      );
+    } catch(e) { console.warn('Sync error:', e); }
+  };
+
+  const setPositions = (fn) => {
+    setPositionsState(prev => {
+      const next = typeof fn === 'function' ? fn(prev) : fn;
+      if (!DEMO_MODE && user) syncToSupabase('positions', next, user.orgId);
+      else if (user) localStorage.setItem('hcc_positions_'+user.orgId, JSON.stringify(next));
+      return next;
+    });
+  };
+  const setCandidates = (fn) => {
+    setCandidatesState(prev => {
+      const next = typeof fn === 'function' ? fn(prev) : fn;
+      if (!DEMO_MODE && user) syncToSupabase('candidates', next, user.orgId);
+      else if (user) localStorage.setItem('hcc_candidates_'+user.orgId, JSON.stringify(next));
+      return next;
+    });
+  };
+  const setRequirements = (fn) => {
+    setRequirementsState(prev => {
+      const next = typeof fn === 'function' ? fn(prev) : fn;
+      if (!DEMO_MODE && user) syncToSupabase('requirements', next, user.orgId);
+      else if (user) localStorage.setItem('hcc_requirements_'+user.orgId, JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Restore Supabase session on load
   useEffect(()=>{
@@ -2123,14 +2542,19 @@ function App() {
           const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
           if (profile) {
             const { data: org } = await supabase.from('organizations').select('*').eq('id', profile.org_id).single();
-            const user = { id: session.user.id, name: profile.name, email: profile.email, orgId: profile.org_id, role: profile.role };
-            setUser(user); setOrg(org);
-            const p = localStorage.getItem('hcc_positions_'+profile.org_id);
-            const c = localStorage.getItem('hcc_candidates_'+profile.org_id);
-            const r = localStorage.getItem('hcc_requirements_'+profile.org_id);
-            if (p) setPositionsState(JSON.parse(p));
-            if (c) setCandidatesState(JSON.parse(c));
-            if (r) setRequirementsState(JSON.parse(r));
+            const u = { id: session.user.id, name: profile.name, email: profile.email, orgId: profile.org_id, role: profile.role };
+            setUser(u); setOrg(org);
+            // Load from Supabase cloud
+            const { data: appData } = await supabase.from('app_data').select('*').eq('org_id', profile.org_id);
+            if (appData) {
+              const pos = appData.find(d=>d.data_type==='positions');
+              const cand = appData.find(d=>d.data_type==='candidates');
+              const req = appData.find(d=>d.data_type==='requirements');
+              if (pos?.data?.length) setPositionsState(pos.data);
+              if (cand?.data?.length) setCandidatesState(cand.data);
+              if (req?.data?.length) setRequirementsState(req.data);
+              else setRequirementsState(DEFAULT_REQUIREMENTS);
+            }
           }
         }
       });
@@ -2162,14 +2586,27 @@ function App() {
   }
 
   if (!user) {
-    return <AuthScreen onAuth={(u,o)=>{
+    return <AuthScreen onAuth={async (u,o)=>{
       setUser(u); setOrg(o);
-      const p = localStorage.getItem('hcc_positions_'+u.orgId);
-      const c = localStorage.getItem('hcc_candidates_'+u.orgId);
-      const r = localStorage.getItem('hcc_requirements_'+u.orgId);
-      if (p) setPositionsState(JSON.parse(p));
-      if (c) setCandidatesState(JSON.parse(c));
-      if (r) setRequirementsState(JSON.parse(r));
+      if (!DEMO_MODE && supabase) {
+        const { data: appData } = await supabase.from('app_data').select('*').eq('org_id', u.orgId);
+        if (appData) {
+          const pos = appData.find(d=>d.data_type==='positions');
+          const cand = appData.find(d=>d.data_type==='candidates');
+          const req = appData.find(d=>d.data_type==='requirements');
+          if (pos?.data?.length) setPositionsState(pos.data);
+          if (cand?.data?.length) setCandidatesState(cand.data);
+          if (req?.data?.length) setRequirementsState(req.data);
+          else setRequirementsState(DEFAULT_REQUIREMENTS);
+        }
+      } else {
+        const p = localStorage.getItem('hcc_positions_'+u.orgId);
+        const c = localStorage.getItem('hcc_candidates_'+u.orgId);
+        const r = localStorage.getItem('hcc_requirements_'+u.orgId);
+        if (p) setPositionsState(JSON.parse(p));
+        if (c) setCandidatesState(JSON.parse(c));
+        if (r) setRequirementsState(JSON.parse(r));
+      }
     }}/>;
   }
 
@@ -2184,6 +2621,7 @@ function App() {
     { id:'team', icon:'🔗', label:'Team Scoring' },
     { id:'jdbuilder', icon:'✍️', label:'JD Builder' },
     { id:'requirements', icon:'📚', label:'Requirements Library' },
+    { id:'admin', icon:'🔐', label:'Admin' },
   ];
 
   const renderView = () => {
@@ -2198,37 +2636,68 @@ function App() {
       case 'team': return <TeamScoringView positions={positions} candidates={candidates} setCandidates={setCandidates}/>;
       case 'jdbuilder': return <JDBuilderView positions={positions} setPositions={setPositions} requirements={requirements}/>;
       case 'requirements': return <RequirementsView requirements={requirements} setRequirements={setRequirements}/>;
+      case 'admin': return <AdminView user={user}/>;
       default: return null;
     }
   };
 
-  const initials = user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  const initials = user && user.name ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '';
 
   return (
     <div className="app">
+      {showProfile && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowProfile(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <div className="modal-title">My Account</div>
+              <button className="modal-close" onClick={()=>setShowProfile(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{textAlign:'center',marginBottom:24}}>
+                <div style={{width:72,height:72,borderRadius:'50%',background:'linear-gradient(135deg,var(--accent),var(--accent2))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:'#fff',margin:'0 auto 12px'}}>
+                  {initials}
+                </div>
+                <div style={{fontSize:20,fontWeight:700}}>{user.name}</div>
+                <div style={{color:'var(--muted)',fontSize:13,marginTop:4}}>{user.role}</div>
+              </div>
+              <div className="card" style={{marginBottom:12}}>
+                <div className="section-title">Account Details</div>
+                <div className="info-row"><span className="info-key">Email</span><span className="info-val">{user.email}</span></div>
+                <div className="info-row"><span className="info-key">Role</span><span className="info-val" style={{textTransform:'capitalize'}}>{user.role}</span></div>
+                <div className="info-row"><span className="info-key">Organization</span><span className="info-val">{org?.name||'—'}</span></div>
+              </div>
+              <button className="btn btn-danger btn-full" onClick={()=>{storage.set('hcc_session',null);setUser(null);setOrg(null);}}>
+                🚪 Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-name">Hiring CC</div>
-          <div className="sidebar-org">{org?.name||'My Organization'}</div>
+          <div>
+            <div className="sidebar-brand-name">Hiring CC</div>
+            <div className="sidebar-org">{org?.name||'My Organization'}</div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div className="user-avatar" style={{width:30,height:30,fontSize:12,cursor:'pointer'}} onClick={()=>setShowProfile(true)}>{initials}</div>
+          </div>
         </div>
         <div className="nav-section">
-          {NAV.map(n=>(
+          {NAV.filter(n=>n.id!=='admin'||(user.role==='owner'||user.email==='ben@tradecoffeeco.com')).map(n=>(
             <button key={n.id} className={`nav-item ${view===n.id?'active':''}`} onClick={()=>setView(n.id)}>
               <span className="nav-icon">{n.icon}</span>{n.label}
             </button>
           ))}
         </div>
         <div className="sidebar-footer">
-          <div className="user-pill">
+          <div className="user-pill" style={{cursor:'pointer'}} onClick={()=>setShowProfile(true)}>
             <div className="user-avatar">{initials}</div>
             <div className="user-info">
               <div className="user-name">{user.name}</div>
-              <div className="user-role">{user.role}</div>
+              <div className="user-role" style={{color:'var(--accent)',fontSize:10}}>View Account →</div>
             </div>
           </div>
-          <button className="btn btn-ghost btn-sm btn-full mt-2" style={{justifyContent:'flex-start',gap:8}} onClick={()=>{storage.set('hcc_session',null);setUser(null);setOrg(null);}}>
-            🚪 Sign Out
-          </button>
         </div>
       </div>
       <div className="main">{renderView()}</div>
