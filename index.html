@@ -1636,6 +1636,33 @@ function TranscriptImport({ selCand, setCandidates }) {
   );
 }
 
+
+function renderNoteGroups(interviewNotes, removeNote) {
+  const notes = [...interviewNotes].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const groups = {};
+  notes.forEach(n => {
+    const d = n.savedAt ? n.savedAt.split(',')[0] + (n.savedAt.includes('Cleaned') ? ' (AI Cleaned)' : '') : (n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Notes');
+    if (!groups[d]) groups[d] = [];
+    groups[d].push(n);
+  });
+  return Object.entries(groups).map(([date, groupNotes]) => (
+    React.createElement('div', {key:date, className:'mb-4'},
+      React.createElement('div', {style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid var(--border)'}}, date),
+      groupNotes.map(n=>
+        React.createElement('div', {key:n.id, style:{marginBottom:12,paddingBottom:12,borderBottom:'1px solid var(--border)'}},
+          React.createElement('div', {className:'flex items-center justify-between mb-1'},
+            React.createElement('span', {style:{fontSize:10,color:'var(--muted)',fontFamily:'var(--mono)'}}, n.savedAt||''),
+            React.createElement('button', {className:'btn btn-ghost btn-xs', onClick:()=>removeNote(n.id)}, '✕')
+          ),
+          React.createElement('div', {style:{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap'}}, 
+            n.star ? React.createElement(React.Fragment, null, React.createElement('span', {className:'note-star'}, '⭐ '), n.text) : n.text
+          )
+        )
+      )
+    )
+  ));
+}
+
 /* ═══════════════════════════════════════
    INTERVIEW NOTES
    ═══════════════════════════════════════ */
@@ -1758,32 +1785,7 @@ function InterviewsView({ candidates, setCandidates, positions }) {
         <div className="card">
           <div className="section-title">Interview Timeline ({(cand.interviewNotes||[]).length} notes)</div>
           {(cand.interviewNotes||[]).length===0 && <div className="text-muted text-sm">No notes yet. Start the timer and take notes above.</div>}
-          {(()=>{
-            const notes = [...(cand.interviewNotes||[])].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
-            // Group by date (day)
-            const groups = {};
-            notes.forEach(n => {
-              const d = n.savedAt ? n.savedAt.split(',')[0] + (n.savedAt.includes('Cleaned') ? ' (AI Cleaned)' : '') : (n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Notes');
-              if (!groups[d]) groups[d] = [];
-              groups[d].push(n);
-            });
-            return Object.entries(groups).map(([date, groupNotes]) => (
-              <div key={date} className="mb-4">
-                <div style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:10,paddingBottom:6,borderBottom:'1px solid var(--border)'}}>
-                  {date}
-                </div>
-                {groupNotes.map(n=>(
-                  <div key={n.id} style={{marginBottom:12,paddingBottom:12,borderBottom:'1px solid var(--border)'}}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span style={{fontSize:10,color:'var(--muted)',fontFamily:'var(--mono)'}}>{n.savedAt||''}</span>
-                      <button className="btn btn-ghost btn-xs" onClick={()=>removeNote(n.id)}>✕</button>
-                    </div>
-                    <div style={{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap'}}>{n.star && <span className="note-star">⭐ </span>}{n.text}</div>
-                  </div>
-                ))}
-              </div>
-            ));
-          })()}
+          {renderNoteGroups(cand.interviewNotes||[], removeNote)}
         </div>
       </>}
     </div>
@@ -2471,7 +2473,7 @@ function App() {
     }
   };
 
-  const initials = user ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '';
+  const initials = user && user.name ? user.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : '';
 
   return (
     <div className="app">
