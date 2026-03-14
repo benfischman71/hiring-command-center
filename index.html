@@ -272,7 +272,7 @@ tr:hover td{background:var(--surface2)}
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
-/* v2.1 */
+/* v1773461120 */
 /* ═══════════════════════════════════════
    CONFIG  — replace with your Supabase credentials
    ═══════════════════════════════════════ */
@@ -1502,11 +1502,7 @@ function CleanupNotesButton({ selCand, setCandidates, candidates }) {
   };
 
   const saveAsSummary = () => {
-    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,overallNotes:(c.overallNotes?c.overallNotes+'
-
----
-
-':'')+summary}:c));
+    setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,overallNotes:(c.overallNotes?c.overallNotes+' --- ':'')+summary}:c));
     setShowSummary(false);
     alert('Summary saved to Overall Notes in Scorecard!');
   };
