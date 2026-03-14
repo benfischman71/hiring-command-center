@@ -779,9 +779,7 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({
-                      model:'claude-sonnet-4-20250514',
-                      max_tokens:1000,
-                      messages:[{role:'user',content:`The following may be raw or garbled text from a PDF. Please clean it up into a readable job description, preserving all the important content. Remove any PDF artifacts, binary characters, or formatting noise. Return only the cleaned job description text, nothing else.
+                      prompt:`The following may be raw or garbled text from a PDF. Please clean it up into a readable job description, preserving all the important content. Remove any PDF artifacts, binary characters, or formatting noise. Return only the cleaned job description text, nothing else.
 
 ${form.jd.slice(0,4000)}`
                     })
@@ -1234,11 +1232,7 @@ function JDBuilderView({ positions, setPositions, requirements: reqLib }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-3-5-haiku-20241022',
-          max_tokens: 1500,
-          messages: [{
-            role: 'user',
-            content: `You are an expert recruiter and talent acquisition specialist. Create a compelling, detailed job description based on the following information:
+          prompt: `You are an expert recruiter and talent acquisition specialist. Create a compelling, detailed job description based on the following information:
 
 ${aiPrompt}
 
@@ -1258,7 +1252,7 @@ Return a JSON object with these exact fields (no markdown, no backticks, just ra
       });
       const data = await response.json();
       if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
-      const text = data.content[0].text.replace(/```json|```/g,'').trim();
+      const text = data.text.replace(/```json|```/g,'').trim();
       const parsed = JSON.parse(text);
       setForm(f => ({
         ...f,
