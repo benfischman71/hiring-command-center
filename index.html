@@ -917,6 +917,13 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                     <td>
                       <div className="flex gap-2">
                         <button className="btn btn-ghost btn-sm" onClick={()=>{setEditing(c);setShowModal(true)}}>Edit</button>
+                        <select className="btn btn-ghost btn-sm" style={{cursor:'pointer',maxWidth:130,fontSize:12}}
+                          value={c.positionId}
+                          onChange={e=>setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,positionId:e.target.value,scores:{}}:x))}
+                          title="Move to different position">
+                          <option value="" disabled>Move to...</option>
+                          {positions.map(p=><option key={p.id} value={p.id}>{p.title}</option>)}
+                        </select>
                         <button className="btn btn-danger btn-sm" onClick={()=>setCandidates(cs=>cs.filter(x=>x.id!==c.id))}>✕</button>
                       </div>
                     </td>
