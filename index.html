@@ -267,117 +267,149 @@ tr:hover td{background:var(--surface2)}
 
 /* ── MOBILE RESPONSIVE ───────────────────────── */
 @media (max-width: 768px) {
-  .app { flex-direction: column; height: auto; min-height: 100vh; }
+  /* Full screen app, no split layout */
+  .app { flex-direction: column; height: 100vh; overflow: hidden; }
 
+  /* TOP NAV BAR */
   .sidebar {
     width: 100%;
     min-width: unset;
     height: auto;
+    max-height: none;
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding: 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: var(--surface);
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: visible;
   }
 
-  .sidebar-brand { 
-    display: flex; 
-    align-items: center; 
+  /* Brand row */
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 0;
   }
+  .sidebar-org { font-size: 10px; }
 
-  /* Horizontal scrolling nav on mobile */
+  /* Nav items: single horizontal scrolling row of icon+label pills */
   .nav-section {
     display: flex;
+    flex-direction: row;
     overflow-x: auto;
-    padding: 8px 8px;
+    padding: 6px 8px;
     gap: 4px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    white-space: nowrap;
   }
   .nav-section::-webkit-scrollbar { display: none; }
 
   .nav-item {
-    flex-shrink: 0;
-    padding: 7px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    background: var(--surface2);
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--muted);
     white-space: nowrap;
+    min-width: 52px;
+    border: none;
     width: auto;
+    flex-shrink: 0;
   }
-  .nav-item.active { background: rgba(79,142,247,.2); color: var(--accent); }
-  .nav-item .nav-icon { font-size: 13px; }
-
-  /* Move user pill into brand bar on mobile */
-  .sidebar-footer { 
-    display: none;
+  .nav-item.active {
+    background: rgba(79,142,247,.15);
+    color: var(--accent);
   }
+  .nav-item .nav-icon { font-size: 18px; width: auto; }
 
-  .main { 
+  /* Hide sidebar footer - put account in brand bar */
+  .sidebar-footer { display: none; }
+
+  /* MAIN CONTENT - scrollable */
+  .main {
     flex: 1;
-    overflow-y: auto; 
+    overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    height: 0; /* forces flex child to scroll */
   }
 
-  .page { padding: 16px; max-width: 100%; }
-  .page-header { flex-direction: column; gap: 10px; align-items: flex-start; }
-  .page-title { font-size: 20px; }
+  .page { padding: 16px 14px; max-width: 100%; }
+  .page-header { flex-direction: column; gap: 10px; }
+  .page-header .btn { width: 100%; justify-content: center; }
+  .page-title { font-size: 22px; }
 
-  .grid-2 { grid-template-columns: 1fr; gap: 12px; }
-  .grid-3 { grid-template-columns: 1fr; gap: 12px; }
+  /* Grids stack */
+  .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 12px; }
 
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  /* Stats 2-up */
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
   .stat-card { padding: 12px; }
-  .stat-value { font-size: 22px; }
+  .stat-value { font-size: 24px; }
+  .stat-label { font-size: 10px; }
 
-  .modal { 
-    max-width: 100%; 
-    margin: 0; 
-    border-radius: 20px 20px 0 0; 
-    position: fixed; 
-    bottom: 0; 
-    left: 0; 
-    right: 0; 
-    max-height: 90vh;
+  /* Cards */
+  .card { padding: 14px; border-radius: 12px; }
+
+  /* Tables - horizontal scroll */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { font-size: 12px; min-width: 500px; }
+  th, td { padding: 8px 10px; }
+
+  /* Modals - bottom sheet */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    position: relative;
+    bottom: auto;
+    max-height: 88vh;
     overflow-y: auto;
   }
-  .modal-overlay { align-items: flex-end; padding: 0; }
   .modal-lg { max-width: 100%; }
-  .modal-header { padding: 20px 20px 0; }
-  .modal-body { padding: 16px 20px 20px; }
-  .modal-footer { padding: 0 20px 20px; }
+  .modal-header { padding: 16px 18px 0; }
+  .modal-body { padding: 14px 18px 18px; }
+  .modal-footer { padding: 0 18px 24px; }
 
-  table { font-size: 12px; }
-  th, td { padding: 8px 8px; }
+  /* Tabs */
+  .tabs { overflow-x: auto; flex-wrap: nowrap; gap: 0; }
+  .tab { white-space: nowrap; flex-shrink: 0; padding: 10px 14px; font-size: 13px; }
 
-  .tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
-  .tab { white-space: nowrap; flex-shrink: 0; padding: 8px 12px; font-size: 12px; }
+  /* Buttons */
+  .btn { font-size: 13px; }
+  .btn-sm { padding: 7px 12px; font-size: 12px; }
 
-  .score-btns .score-btn { width: 34px; height: 34px; font-size: 12px; }
+  /* Score buttons */
+  .score-btns { flex-wrap: wrap; gap: 4px; }
+  .score-btn { width: 38px; height: 38px; }
 
-  .btn { padding: 9px 14px; font-size: 13px; }
-  .btn-sm { padding: 6px 12px; font-size: 12px; }
-  .btn-full { width: 100%; justify-content: center; }
+  /* Req rows */
+  .req-row { flex-wrap: wrap; gap: 6px; }
 
+  /* Hide non-essential columns */
   .hide-mobile { display: none !important; }
 
-  .card { padding: 14px; }
+  /* Pipeline horizontal scroll */
+  .pipeline { overflow-x: auto; }
 
-  .share-code { font-size: 11px; }
-  
-  .compare-table th, .compare-table td { padding: 8px 10px; font-size: 12px; }
-}
-
-@media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr 1fr; }
-  .auth-card { padding: 28px 20px; border-radius: 20px 20px 0 0; position: fixed; bottom: 0; left: 0; right: 0; max-width: 100%; }
-  .auth-bg { align-items: flex-end; }
+  /* Auth */
+  .auth-bg { align-items: flex-end; padding: 0; }
+  .auth-card {
+    border-radius: 20px 20px 0 0;
+    padding: 28px 20px 36px;
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 /* ── DESKTOP ENHANCEMENTS ────────────────────── */
@@ -2546,14 +2578,32 @@ function App() {
             setUser(u); setOrg(org);
             // Load from Supabase cloud
             const { data: appData } = await supabase.from('app_data').select('*').eq('org_id', profile.org_id);
-            if (appData) {
-              const pos = appData.find(d=>d.data_type==='positions');
-              const cand = appData.find(d=>d.data_type==='candidates');
-              const req = appData.find(d=>d.data_type==='requirements');
-              if (pos?.data?.length) setPositionsState(pos.data);
+            const pos = appData?.find(d=>d.data_type==='positions');
+            const cand = appData?.find(d=>d.data_type==='candidates');
+            const req = appData?.find(d=>d.data_type==='requirements');
+            if (pos?.data?.length) {
+              setPositionsState(pos.data);
               if (cand?.data?.length) setCandidatesState(cand.data);
               if (req?.data?.length) setRequirementsState(req.data);
               else setRequirementsState(DEFAULT_REQUIREMENTS);
+            } else {
+              // Fall back to localStorage and migrate
+              const lp = localStorage.getItem('hcc_positions_'+profile.org_id);
+              const lc = localStorage.getItem('hcc_candidates_'+profile.org_id);
+              const lr = localStorage.getItem('hcc_requirements_'+profile.org_id);
+              const posData = lp ? JSON.parse(lp) : [];
+              const candData = lc ? JSON.parse(lc) : [];
+              const reqData = lr ? JSON.parse(lr) : DEFAULT_REQUIREMENTS;
+              setPositionsState(posData);
+              setCandidatesState(candData);
+              setRequirementsState(reqData);
+              if (posData.length || candData.length) {
+                Promise.all([
+                  supabase.from('app_data').upsert({org_id:profile.org_id,data_type:'positions',data:posData},{onConflict:'org_id,data_type'}),
+                  supabase.from('app_data').upsert({org_id:profile.org_id,data_type:'candidates',data:candData},{onConflict:'org_id,data_type'}),
+                  supabase.from('app_data').upsert({org_id:profile.org_id,data_type:'requirements',data:reqData},{onConflict:'org_id,data_type'})
+                ]).then(()=>console.log('Migrated localStorage to Supabase'));
+              }
             }
           }
         }
@@ -2590,14 +2640,35 @@ function App() {
       setUser(u); setOrg(o);
       if (!DEMO_MODE && supabase) {
         const { data: appData } = await supabase.from('app_data').select('*').eq('org_id', u.orgId);
-        if (appData) {
-          const pos = appData.find(d=>d.data_type==='positions');
-          const cand = appData.find(d=>d.data_type==='candidates');
-          const req = appData.find(d=>d.data_type==='requirements');
-          if (pos?.data?.length) setPositionsState(pos.data);
+        const pos = appData?.find(d=>d.data_type==='positions');
+        const cand = appData?.find(d=>d.data_type==='candidates');
+        const req = appData?.find(d=>d.data_type==='requirements');
+
+        if (pos?.data?.length) {
+          // Cloud data exists - use it
+          setPositionsState(pos.data);
           if (cand?.data?.length) setCandidatesState(cand.data);
           if (req?.data?.length) setRequirementsState(req.data);
           else setRequirementsState(DEFAULT_REQUIREMENTS);
+        } else {
+          // No cloud data - check localStorage and migrate up
+          const lp = localStorage.getItem('hcc_positions_'+u.orgId);
+          const lc = localStorage.getItem('hcc_candidates_'+u.orgId);
+          const lr = localStorage.getItem('hcc_requirements_'+u.orgId);
+          const posData = lp ? JSON.parse(lp) : [];
+          const candData = lc ? JSON.parse(lc) : [];
+          const reqData = lr ? JSON.parse(lr) : DEFAULT_REQUIREMENTS;
+          setPositionsState(posData);
+          setCandidatesState(candData);
+          setRequirementsState(reqData);
+          // Migrate to Supabase
+          if (posData.length || candData.length) {
+            Promise.all([
+              supabase.from('app_data').upsert({org_id:u.orgId,data_type:'positions',data:posData},{onConflict:'org_id,data_type'}),
+              supabase.from('app_data').upsert({org_id:u.orgId,data_type:'candidates',data:candData},{onConflict:'org_id,data_type'}),
+              supabase.from('app_data').upsert({org_id:u.orgId,data_type:'requirements',data:reqData},{onConflict:'org_id,data_type'})
+            ]).then(()=>console.log('Migrated localStorage to Supabase'));
+          }
         }
       } else {
         const p = localStorage.getItem('hcc_positions_'+u.orgId);
