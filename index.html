@@ -1464,6 +1464,113 @@ ${form.requirements.map(r=>`• ${r.name}`).join('\n')}`;
 }
 
 /* ═══════════════════════════════════════
+   TRANSCRIPT IMPORT
+   ═══════════════════════════════════════ */
+function TranscriptImport({ selCand, setCandidates }) {
+  const [open, setOpen] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const PROXY = 'https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
+
+  const parseTranscript = async () => {
+    if (!transcript.trim()) return;
+    setLoading(true); setError('');
+    try {
+      const resp = await fetch(PROXY, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON },
+        body: JSON.stringify({
+          prompt: 'You are analyzing a job interview transcript. Extract 8-12 key moments, insights, and observations. For each one return a JSON array of objects with fields: text (the insight, 1-2 sentences), star (true if this is a particularly strong signal, positive or negative). Return ONLY a valid JSON array, no markdown, no explanation. Transcript: ' + transcript.slice(0, 6000),
+          max_tokens: 1500
+        })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      const parsed = JSON.parse(data.text.replace(/```json|```/g,'').trim());
+      const notes = parsed.map((item, i) => ({
+        id: uid(),
+        text: item.text,
+        time: 'transcript',
+        star: item.star || false,
+        createdAt: new Date().toISOString()
+      }));
+      setCandidates(cs => cs.map(c => c.id === selCand
+        ? { ...c, interviewNotes: [...(c.interviewNotes||[]), ...notes] }
+        : c
+      ));
+      setTranscript('');
+      setOpen(false);
+    } catch(e) {
+      // Fallback: just split by lines if Claude fails
+      const lines = transcript.split('\n').filter(l => l.trim().length > 30);
+      const notes = lines.slice(0,15).map(line => ({
+        id: uid(), text: line.trim(), time: 'transcript', star: false, createdAt: new Date().toISOString()
+      }));
+      setCandidates(cs => cs.map(c => c.id === selCand
+        ? { ...c, interviewNotes: [...(c.interviewNotes||[]), ...notes] }
+        : c
+      ));
+      setTranscript('');
+      setOpen(false);
+    }
+    setLoading(false);
+  };
+
+  if (!selCand) return null;
+
+  return (
+    <div className="card mb-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <div style={{fontWeight:600,fontSize:14}}>🎙️ Import Interview Transcript</div>
+          <div className="text-muted text-xs mt-1">Paste a transcript and Claude will extract key insights automatically</div>
+        </div>
+        <button className="btn btn-secondary btn-sm" onClick={()=>setOpen(o=>!o)}>
+          {open ? 'Cancel' : 'Import Transcript'}
+        </button>
+      </div>
+      {open && <>
+        <hr className="divider"/>
+        <div className="field" style={{margin:'12px 0 0'}}>
+          <label>Paste or drop transcript here</label>
+          <textarea
+            style={{minHeight:160,fontSize:13,lineHeight:1.6}}
+            placeholder="Paste the full interview transcript here. Claude will read it and extract 8-12 key insights, highlights, and observations as timestamped notes..."
+            value={transcript}
+            onChange={e=>setTranscript(e.target.value)}
+            onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
+            onDragLeave={e=>{e.currentTarget.style.borderColor='';}}
+            onDrop={e=>{
+              e.preventDefault();
+              e.currentTarget.style.borderColor='';
+              const file = e.dataTransfer.files[0];
+              if (file) { const r=new FileReader(); r.onload=ev=>setTranscript(ev.target.result); r.readAsText(file); }
+              else { const t=e.dataTransfer.getData('text'); if(t) setTranscript(t); }
+            }}/>
+        </div>
+        {error && <div style={{color:'var(--red)',fontSize:12,marginBottom:8}}>{error}</div>}
+        <div className="flex gap-2">
+          <button className="btn btn-purple" onClick={parseTranscript} disabled={loading||!transcript.trim()}>
+            {loading ? '⏳ Claude is reading the transcript...' : '✨ Extract Key Insights with Claude'}
+          </button>
+          <button className="btn btn-secondary" onClick={()=>{
+            const lines = transcript.split('\n').filter(l=>l.trim().length>20);
+            const notes = lines.slice(0,20).map(line=>({id:uid(),text:line.trim(),time:'transcript',star:false,createdAt:new Date().toISOString()}));
+            setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]),...notes]}:c));
+            setTranscript(''); setOpen(false);
+          }} disabled={!transcript.trim()}>
+            Import as-is
+          </button>
+        </div>
+      </>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
    INTERVIEW NOTES
    ═══════════════════════════════════════ */
 function InterviewsView({ candidates, setCandidates, positions }) {
@@ -1579,6 +1686,8 @@ function InterviewsView({ candidates, setCandidates, positions }) {
             <button className="btn btn-secondary btn-sm" onClick={()=>addNote(true)}>⭐ Add Highlight</button>
           </div>
         </div>
+
+        <TranscriptImport selCand={selCand} setCandidates={setCandidates}/>
 
         <div className="card">
           <div className="section-title">Interview Timeline ({(cand.interviewNotes||[]).length} notes)</div>
