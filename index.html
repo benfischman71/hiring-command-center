@@ -1323,6 +1323,12 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
             </div>
         }
 
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-muted text-xs">Scores save automatically as you click</div>
+          <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Reset all scores for '+cand.name+'?'))setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,scores:{},recommendation:'',overallNotes:''}:c))}}>
+            ↺ Reset Scores
+          </button>
+        </div>
         <div className="card mt-4">
           <div className="section-title">Overall Recommendation</div>
           <div className="flex gap-2 mb-3" style={{flexWrap:'wrap'}}>
