@@ -2630,7 +2630,49 @@ function TranscriptImport({ selCand, setCandidates }) {
 }
 
 
-function renderNoteGroups(interviewNotes, removeNote, onCleanGroup) {
+function NoteItem({ n, removeNote, onEdit }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(n.text);
+
+  const save = () => { onEdit(n.id, draft); setEditing(false); };
+  const cancel = () => { setDraft(n.text); setEditing(false); };
+
+  return (
+    <div style={{position:'relative',paddingRight:60}}>
+      {editing
+        ? <div>
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={e=>setDraft(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Escape')cancel();}}
+              style={{width:'100%',fontSize:13,lineHeight:1.8,minHeight:80,marginBottom:6}}
+            />
+            <div style={{display:'flex',gap:6}}>
+              <button className="btn btn-primary btn-xs" onClick={save}>Save</button>
+              <button className="btn btn-ghost btn-xs" onClick={cancel}>Cancel</button>
+            </div>
+          </div>
+        : <div style={{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap',color:'var(--text)'}}>
+            {n.star && <span style={{color:'var(--yellow)'}}>⭐ </span>}
+            {n.text}
+          </div>
+      }
+      {!editing && (
+        <div style={{position:'absolute',top:0,right:0,display:'flex',gap:2}}>
+          <button onClick={()=>{setDraft(n.text);setEditing(true);}}
+            style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:12,padding:'2px 4px',lineHeight:1}}
+            title="Edit note">✏️</button>
+          <button onClick={()=>removeNote(n.id)}
+            style={{background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14,padding:'2px 4px',lineHeight:1}}
+            title="Delete note">×</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderNoteGroups(interviewNotes, removeNote, onCleanGroup, onEditNote) {
   const notes = [...interviewNotes].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   const groups = {};
   notes.forEach(n => {
@@ -2643,7 +2685,6 @@ function renderNoteGroups(interviewNotes, removeNote, onCleanGroup) {
 
   return Object.entries(groups).map(([date, groupNotes]) => (
     React.createElement('div', {key:date, style:{marginBottom:20,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}},
-      // Group header
       React.createElement('div', {style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid var(--border)',background:'var(--surface3)'}},
         React.createElement('span', {style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em'}}, date),
         React.createElement('div', {style:{display:'flex',gap:6,alignItems:'center'}},
@@ -2655,7 +2696,6 @@ function renderNoteGroups(interviewNotes, removeNote, onCleanGroup) {
           }, '✨ Clean')
         )
       ),
-      // Notes content - all notes in group as one readable block
       React.createElement('div', {style:{padding:'14px 16px'}},
         groupNotes.map((n,i) =>
           React.createElement('div', {
@@ -2663,23 +2703,10 @@ function renderNoteGroups(interviewNotes, removeNote, onCleanGroup) {
             style:{
               marginBottom: i < groupNotes.length-1 ? 12 : 0,
               paddingBottom: i < groupNotes.length-1 ? 12 : 0,
-              borderBottom: i < groupNotes.length-1 ? '1px solid var(--border)' : 'none',
-              position:'relative'
+              borderBottom: i < groupNotes.length-1 ? '1px solid var(--border)' : 'none'
             }
           },
-            React.createElement('div', {
-              style:{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap',paddingRight:28,color:'var(--text)'}
-            },
-              n.star ? React.createElement(React.Fragment, null,
-                React.createElement('span', {style:{color:'var(--yellow)'}}, '⭐ '),
-                n.text
-              ) : n.text
-            ),
-            React.createElement('button', {
-              onClick:()=>removeNote(n.id),
-              style:{position:'absolute',top:0,right:0,background:'none',border:'none',color:'var(--muted)',cursor:'pointer',fontSize:14,padding:'2px 4px',lineHeight:1},
-              title:'Delete note'
-            }, '×')
+            React.createElement(NoteItem, {n, removeNote, onEdit: onEditNote||function(){}})
           )
         )
       )
@@ -2718,6 +2745,7 @@ function InterviewsView({ candidates, setCandidates, positions }) {
   };
 
   const removeNote = (noteId) => setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:(c.interviewNotes||[]).filter(n=>n.id!==noteId)}:c));
+  const editNote = (noteId, newText) => setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:(c.interviewNotes||[]).map(n=>n.id===noteId?{...n,text:newText}:n)}:c));
 
   return (
     <div className="page">
@@ -2835,7 +2863,7 @@ function InterviewsView({ candidates, setCandidates, positions }) {
                 setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]).filter(n=>!oldIds.includes(n.id)),cleanedNote]}:c));
               }
             } catch(e) { alert('Could not clean notes: ' + e.message); }
-          })}
+          }), editNote)}
         </div>
       </>}
     </div>
