@@ -1119,9 +1119,30 @@ function CandidateProfileModal({ candidate, positions, onEdit, onClose }) {
 
           {/* Overall notes */}
           {candidate.overallNotes && (
-            <div className="card">
+            <div className="card" style={{marginBottom:12}}>
               <div className="section-title">Overall Assessment</div>
               <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{candidate.overallNotes}</div>
+            </div>
+          )}
+
+          {/* Rich Profile — show if saved */}
+          {candidate.richProfile && (
+            <div style={{marginTop:4}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                <div style={{flex:1,height:1,background:'var(--border)'}}/>
+                <div style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}}>Full Profile</div>
+                <div style={{flex:1,height:1,background:'var(--border)'}}/>
+              </div>
+              <ParsedProfileCard profile={candidate.richProfile} />
+            </div>
+          )}
+
+          {!candidate.richProfile && (
+            <div style={{textAlign:'center',padding:'12px 0'}}>
+              <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>No full profile yet</div>
+              <button className="btn btn-sm" style={{background:'rgba(79,142,247,.1)',color:'var(--accent)',border:'1px solid rgba(79,142,247,.25)'}} onClick={onEdit}>
+                ✨ Build Profile
+              </button>
             </div>
           )}
         </div>
@@ -1260,9 +1281,10 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
 /* ═══════════════════════════════════════
    PARSED PROFILE CARD
    ═══════════════════════════════════════ */
-function ParsedProfileCard({ profile, onDismiss }) {
+function ParsedProfileCard({ profile, onClear, onDismiss }) {
   const [collapsed, setCollapsed] = React.useState(false);
   if (!profile) return null;
+  var clearFn = onClear || onDismiss;
 
   const initials = profile.name ? profile.name.split(' ').map(function(n){return n[0];}).join('').slice(0,2).toUpperCase() : '?';
 
@@ -1286,7 +1308,7 @@ function ParsedProfileCard({ profile, onDismiss }) {
           <button className="btn btn-ghost btn-xs" onClick={function(){setCollapsed(function(c){return !c;})}} style={{color:'var(--muted)'}}>
             {collapsed ? '▼ Expand' : '▲ Collapse'}
           </button>
-          <button className="btn btn-ghost btn-xs" onClick={onDismiss} style={{color:'var(--muted)'}}>✕</button>
+          {clearFn && <button className="btn btn-danger btn-xs" onClick={clearFn} title="Clear profile">🗑 Clear</button>}
         </div>
       </div>
 
@@ -1372,6 +1394,25 @@ function ParsedProfileCard({ profile, onDismiss }) {
 }
 
 function CandidateModal({ candidate, positions, onSave, onClose }) {
+  // Seed initial richProfile from existing candidate data or saved richProfile
+  var seedProfile = null;
+  if (candidate && candidate.richProfile) {
+    seedProfile = candidate.richProfile;
+  } else if (candidate && candidate.name) {
+    seedProfile = {
+      name: candidate.name || '',
+      email: candidate.email || '',
+      phone: candidate.phone || '',
+      linkedIn: candidate.linkedIn || '',
+      currentTitle: '',
+      currentCompany: '',
+      summary: candidate.notes || '',
+      workHistory: [],
+      education: [],
+      skills: []
+    };
+  }
+
   const [form, setForm] = useState(candidate || { name:'', email:'', phone:'', positionId:'', stage:'Applied', linkedIn:'', notes:'' });
   const [liText, setLiText] = useState('');
   const [liLoading, setLiLoading] = useState(false);
@@ -1381,29 +1422,73 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeError, setResumeError] = useState('');
   const [resumeFileName, setResumeFileName] = useState('');
-  const [parsedProfile, setParsedProfile] = useState(null);
+  const [parsedProfile, setParsedProfile] = useState(seedProfile);
   const fileInputRef = React.useRef(null);
   const update = (k,v) => setForm(f=>({...f,[k]:v}));
 
   const RICH_PROMPT = 'Extract a complete candidate profile from this content. Return ONLY a raw JSON object (no markdown, no backticks) with these exact fields: name (string), email (string), phone (string), linkedIn (string, full URL if found), currentTitle (string), currentCompany (string), summary (2-3 sentence professional overview), workHistory (array of objects: {title, company, dates, bullets: string[max 3 bullets]}), education (array of objects: {institution, degree, year}), skills (array of up to 12 skill strings). Use empty string or empty array if a field is not found.';
 
+  // MERGE new parsed data into existing profile - never wipe what we already have
   const applyParsed = function(parsed) {
-    setParsedProfile(parsed);
-    var noteParts = [];
-    if (parsed.currentTitle) noteParts.push(parsed.currentTitle);
-    if (parsed.currentCompany) noteParts.push(parsed.currentCompany);
-    if (parsed.summary) noteParts.push(parsed.summary);
+    setParsedProfile(function(existing) {
+      var base = existing || {};
+      // Merge scalar fields - only overwrite if new value is non-empty
+      var merged = {
+        name: parsed.name || base.name || '',
+        email: parsed.email || base.email || '',
+        phone: parsed.phone || base.phone || '',
+        linkedIn: parsed.linkedIn || base.linkedIn || '',
+        currentTitle: parsed.currentTitle || base.currentTitle || '',
+        currentCompany: parsed.currentCompany || base.currentCompany || '',
+        summary: parsed.summary || base.summary || '',
+        // Merge arrays - dedupe by title+company for workHistory, by institution for education, by value for skills
+        workHistory: mergeWorkHistory(base.workHistory || [], parsed.workHistory || []),
+        education: mergeEducation(base.education || [], parsed.education || []),
+        skills: mergeSkills(base.skills || [], parsed.skills || [])
+      };
+      return merged;
+    });
+    // Update form fields - only fill blanks
     setForm(function(f) {
+      var noteParts = [];
+      if (parsed.currentTitle) noteParts.push(parsed.currentTitle);
+      if (parsed.currentCompany) noteParts.push(parsed.currentCompany);
+      if (parsed.summary) noteParts.push(parsed.summary);
       return {
         ...f,
-        name: parsed.name || f.name,
-        email: parsed.email || f.email,
-        phone: parsed.phone || f.phone,
-        linkedIn: parsed.linkedIn || f.linkedIn,
-        notes: noteParts.filter(Boolean).join(' | ')
+        name: f.name || parsed.name || '',
+        email: f.email || parsed.email || '',
+        phone: f.phone || parsed.phone || '',
+        linkedIn: f.linkedIn || parsed.linkedIn || '',
+        notes: f.notes || noteParts.filter(Boolean).join(' | ')
       };
     });
   };
+
+  function mergeWorkHistory(existing, incoming) {
+    var result = existing.slice();
+    incoming.forEach(function(job) {
+      var key = (job.title||'') + '|' + (job.company||'');
+      var alreadyExists = result.some(function(r){ return ((r.title||'')+'|'+(r.company||'')) === key; });
+      if (!alreadyExists) result.push(job);
+    });
+    return result;
+  }
+  function mergeEducation(existing, incoming) {
+    var result = existing.slice();
+    incoming.forEach(function(ed) {
+      var alreadyExists = result.some(function(r){ return (r.institution||'') === (ed.institution||''); });
+      if (!alreadyExists) result.push(ed);
+    });
+    return result;
+  }
+  function mergeSkills(existing, incoming) {
+    var combined = existing.slice();
+    incoming.forEach(function(sk) {
+      if (!combined.some(function(s){ return s.toLowerCase() === sk.toLowerCase(); })) combined.push(sk);
+    });
+    return combined.slice(0, 16);
+  }
 
   const parseLinkedIn = async function() {
     if (!liText.trim()) return;
@@ -1499,6 +1584,11 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
     if (file) processResumeFile(file);
   };
 
+  const handleSave = function() {
+    if (!form.name || !form.positionId) return;
+    onSave({ ...form, richProfile: parsedProfile });
+  };
+
   return (
     <div className="modal-overlay" onClick={function(e){e.target===e.currentTarget&&onClose();}}>
       <div className="modal" style={{maxWidth:600}}>
@@ -1516,8 +1606,8 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
                 💼 Import from LinkedIn Text
               </button>
               <button className="btn btn-sm" style={{background:'rgba(79,142,247,.1)',color:'var(--accent)',border:'1px solid rgba(79,142,247,.25)',flex:1,justifyContent:'center'}}
-                onClick={function(){setAiImportMode('resume');setParsedProfile(null);setResumeFileName('');}}>
-                ✨ AI Profile from Resume / Screenshot
+                onClick={function(){setAiImportMode('resume');setResumeFileName('');setResumeError('');}}>
+                ✨ Add Resume / Screenshot
               </button>
             </div>
           )}
@@ -1529,9 +1619,7 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
                 <div style={{fontSize:13,fontWeight:600,color:'#0a66c2'}}>💼 Paste LinkedIn Profile Text</div>
                 <button className="btn btn-ghost btn-xs" onClick={function(){setAiImportMode('');}}>✕</button>
               </div>
-              <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>
-                Go to LinkedIn profile → Cmd+A → Cmd+C → paste below
-              </div>
+              <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>Go to LinkedIn profile → Cmd+A → Cmd+C → paste below</div>
               <textarea style={{minHeight:100,fontSize:12}} placeholder="Paste LinkedIn profile text here..." value={liText} onChange={function(e){setLiText(e.target.value);}}/>
               {liError && <div style={{color:'var(--red)',fontSize:11,marginTop:4}}>{liError}</div>}
               <div className="flex gap-2 mt-2">
@@ -1547,36 +1635,23 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
           {aiImportMode === 'resume' && (
             <div className="mb-4">
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:600,color:'var(--accent)'}}>✨ AI Profile from Resume or Screenshot</div>
+                <div style={{fontSize:13,fontWeight:600,color:'var(--accent)'}}>✨ Add Resume or Screenshot to Profile</div>
                 <button className="btn btn-ghost btn-xs" onClick={function(){setAiImportMode('');setResumeError('');setResumeFileName('');}}>✕</button>
+              </div>
+              <div style={{fontSize:11,color:'var(--muted)',marginBottom:10}}>
+                Claude will merge the new info with any existing profile — nothing gets overwritten unless you clear it.
               </div>
               <div
                 onDragOver={function(e){e.preventDefault();setDragOver(true);}}
                 onDragLeave={function(){setDragOver(false);}}
                 onDrop={handleDrop}
                 onClick={function(){fileInputRef.current&&fileInputRef.current.click();}}
-                style={{
-                  border:'2px dashed ' + (dragOver?'var(--accent)':'var(--border2)'),
-                  borderRadius:10,
-                  padding:'28px 20px',
-                  textAlign:'center',
-                  cursor:'pointer',
-                  background:dragOver?'rgba(79,142,247,.06)':'var(--surface2)',
-                  transition:'all .2s'
-                }}>
+                style={{border:'2px dashed '+(dragOver?'var(--accent)':'var(--border2)'),borderRadius:10,padding:'28px 20px',textAlign:'center',cursor:'pointer',background:dragOver?'rgba(79,142,247,.06)':'var(--surface2)',transition:'all .2s'}}>
                 {resumeLoading
-                  ? <div>
-                      <div style={{fontSize:22,marginBottom:6}}>⏳</div>
-                      <div style={{color:'var(--accent)',fontWeight:600,fontSize:13}}>Claude is reading the file...</div>
-                      <div style={{color:'var(--muted)',fontSize:11,marginTop:4}}>Extracting experience, education, skills</div>
-                    </div>
+                  ? <div><div style={{fontSize:22,marginBottom:6}}>⏳</div><div style={{color:'var(--accent)',fontWeight:600,fontSize:13}}>Claude is reading the file...</div><div style={{color:'var(--muted)',fontSize:11,marginTop:4}}>Merging into profile</div></div>
                   : resumeFileName
-                    ? <div style={{color:'var(--accent3)',fontWeight:600}}>✅ {resumeFileName} — profile built!</div>
-                    : <div>
-                        <div style={{fontSize:28,marginBottom:8}}>📄</div>
-                        <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>Drop PDF resume or screenshot here</div>
-                        <div style={{fontSize:11,color:'var(--muted)'}}>or click to browse · PDF, JPG, PNG, WEBP</div>
-                      </div>
+                    ? <div style={{color:'var(--accent3)',fontWeight:600}}>✅ {resumeFileName} — merged into profile!</div>
+                    : <div><div style={{fontSize:28,marginBottom:8}}>📄</div><div style={{fontWeight:600,fontSize:13,marginBottom:4}}>Drop PDF resume or screenshot here</div><div style={{fontSize:11,color:'var(--muted)'}}>or click to browse · PDF, JPG, PNG, WEBP</div></div>
                 }
               </div>
               <input ref={fileInputRef} type="file" accept=".pdf,image/*" style={{display:'none'}}
@@ -1589,18 +1664,16 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
           {parsedProfile && (
             <ParsedProfileCard
               profile={parsedProfile}
-              onDismiss={function(){setParsedProfile(null);}}
+              onClear={function(){if(window.confirm('Clear the full profile for this candidate? This cannot be undone.'))setParsedProfile(null);}}
             />
           )}
 
           {/* Form divider */}
-          {parsedProfile && (
-            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
-              <div style={{flex:1,height:1,background:'var(--border)'}}/>
-              <div style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Review & Confirm Fields</div>
-              <div style={{flex:1,height:1,background:'var(--border)'}}/>
-            </div>
-          )}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,marginTop:parsedProfile?14:0}}>
+            <div style={{flex:1,height:1,background:'var(--border)'}}/>
+            <div style={{fontSize:11,color:'var(--muted)',fontWeight:600}}>Candidate Fields</div>
+            <div style={{flex:1,height:1,background:'var(--border)'}}/>
+          </div>
 
           <div className="grid-2">
             <div className="field"><label>Full Name *</label><input placeholder="Jane Smith" value={form.name} onChange={function(e){update('name',e.target.value);}}/></div>
@@ -1625,10 +1698,8 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
               <div style={{display:'flex',alignItems:'center',gap:6}}>
                 <input placeholder="linkedin.com/in/..." value={form.linkedIn||''} onChange={function(e){update('linkedIn',e.target.value);}} style={{flex:1}}/>
                 {form.linkedIn && (
-                  <a href={form.linkedIn.startsWith('http')?form.linkedIn:'https://'+form.linkedIn}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{color:'#0a66c2',fontSize:18,flexShrink:0,textDecoration:'none'}}
-                    title="Open LinkedIn profile">💼</a>
+                  <a href={form.linkedIn.startsWith('http')?form.linkedIn:'https://'+form.linkedIn} target="_blank" rel="noopener noreferrer"
+                    style={{color:'#0a66c2',fontSize:18,flexShrink:0,textDecoration:'none'}} title="Open LinkedIn profile">💼</a>
                 )}
               </div>
             </div>
@@ -1638,7 +1709,7 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={function(){form.name&&form.positionId&&onSave(form);}} disabled={!form.name||!form.positionId}>
+          <button className="btn btn-primary" onClick={handleSave} disabled={!form.name||!form.positionId}>
             {candidate?'Save Changes':'Add Candidate'}
           </button>
         </div>
@@ -1647,9 +1718,6 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
   );
 }
 
-/* ═══════════════════════════════════════
-   SCORECARDS
-   ═══════════════════════════════════════ */
 function ScorecardsView({ candidates, setCandidates, positions }) {
   const [selPos, setSelPos] = useState('');
   const [selCand, setSelCand] = useState('');
