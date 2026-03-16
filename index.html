@@ -480,8 +480,8 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('en-US',{month:'short',d
 const scoreLabel = s => ['','Does Not Meet','Below Expectations','Meets Expectations','Exceeds Expectations','Far Exceeds'][s]||'';
 const scoreColor = s => ['','#f75c5c','#f7834f','#f7c94f','#2dd4a0','#4f8ef7'][s]||'#fff';
 
-const STAGES = ['Applied','Screening','Scheduling','1st Interview','2nd Round','3rd Round','Final Round','Offer','Hired','Rejected'];
-const STAGE_COLORS = {Applied:'badge-gray',Screening:'badge-blue',Scheduling:'badge-blue',
+const STAGES = ['Applied','Screening','Scheduling','Scheduled','1st Interview','2nd Round','3rd Round','Final Round','Offer','Hired','Rejected'];
+const STAGE_COLORS = {Applied:'badge-gray',Screening:'badge-blue',Scheduling:'badge-blue',Scheduled:'badge-blue',
   '1st Interview':'badge-purple','2nd Round':'badge-purple','3rd Round':'badge-purple',
   'Final Round':'badge-yellow','Offer':'badge-green',Hired:'badge-green',Rejected:'badge-red'};
 
