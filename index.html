@@ -1573,23 +1573,18 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                         <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Are you sure you want to delete ' + c.name + '? This will permanently remove the candidate and all their scores, notes, and interview data.'))setCandidates(cs=>cs.filter(x=>x.id!==c.id))}}>✕</button>
                       </div>
                       {nextStepsOpen===c.id && (
-                        <div style={{marginTop:10,padding:'12px',background:'var(--surface2)',border:'1px solid rgba(79,142,247,.3)',borderRadius:10}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>→ Next Steps</div>
+                        <div style={{marginTop:8,padding:'10px 12px',background:'var(--surface2)',border:'1px solid rgba(79,142,247,.3)',borderRadius:8}}>
+                          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em'}}>→ Next Steps</span>
+                            <button className="btn btn-ghost btn-xs" style={{color:'var(--muted)'}} onClick={()=>setNextStepsOpen(null)}>Done</button>
+                          </div>
                           <textarea
                             autoFocus
-                            placeholder="e.g. Schedule 2nd round, Send take-home, Loop in hiring manager..."
+                            placeholder="e.g. Schedule 2nd round, send take-home, loop in hiring manager..."
                             value={c.nextSteps||''}
                             onChange={e=>setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,nextSteps:e.target.value}:x))}
-                            style={{minHeight:70,fontSize:12,marginBottom:c.nextSteps?8:0}}
+                            style={{minHeight:60,fontSize:12,marginBottom:0}}
                           />
-                          {c.nextSteps && (
-                            <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                              {c.nextSteps.split(/[\n,;]+/).map(function(step,i){
-                                var s = step.trim();
-                                return s ? <span key={i} style={{fontSize:11,padding:'2px 8px',borderRadius:20,background:'rgba(79,142,247,.1)',border:'1px solid rgba(79,142,247,.25)',color:'var(--accent)',fontWeight:500}}>→ {s}</span> : null;
-                              })}
-                            </div>
-                          )}
                         </div>
                       )}
                     </td>
