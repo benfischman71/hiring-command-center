@@ -1307,6 +1307,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
   const [editing, setEditing] = useState(null);
   const [viewingProfile, setViewingProfile] = useState(null);
   const [sharingCandidate, setSharingCandidate] = useState(null);
+  const [nextStepsOpen, setNextStepsOpen] = useState(null);
   const [filterPos, setFilterPos] = useState(initialFilter||'all');
   const [filterStage, setFilterStage] = useState('all');
   useEffect(()=>{ if(initialFilter&&initialFilter!=='all'){setFilterPos(initialFilter);onFilterUsed&&onFilterUsed();} },[initialFilter]);
@@ -1367,23 +1368,21 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                           </a>
                         )}
                       </div>
-                      {c.nextSteps && (
-                        <div style={{marginTop:4,display:'flex',flexWrap:'wrap',gap:4}}>
-                          {c.nextSteps.split(/[\n,;]+/).slice(0,2).map(function(step,i){
-                            var s = step.trim();
-                            return s ? <span key={i} style={{fontSize:11,padding:'2px 7px',borderRadius:20,background:'rgba(79,142,247,.1)',border:'1px solid rgba(79,142,247,.2)',color:'var(--accent)',fontWeight:500}}>→ {s}</span> : null;
-                          })}
-                          {c.nextSteps.split(/[\n,;]+/).filter(function(s){return s.trim();}).length > 2 && <span style={{fontSize:11,color:'var(--muted)'}}>+{c.nextSteps.split(/[\n,;]+/).filter(function(s){return s.trim();}).length - 2} more</span>}
-                        </div>
-                      )}
+
                     </td>
                     <td>{pos?pos.title:'—'}</td>
                     <td><span className={'badge ' + (STAGE_COLORS[c.stage]||'badge-gray')}>{c.stage}</span></td>
                     <td style={{minWidth:140}}><ScoreBar score={score}/></td>
                     <td className="text-muted hide-mobile">{fmtDate(c.createdAt)}</td>
                     <td>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2" style={{flexWrap:'wrap'}}>
                         <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>openEdit(c)}>✏️ Edit</button>
+                        <button
+                          className="btn btn-sm"
+                          style={{fontWeight:600,background:c.nextSteps?'rgba(79,142,247,.15)':'var(--surface2)',color:c.nextSteps?'var(--accent)':'var(--text2)',border:c.nextSteps?'1px solid rgba(79,142,247,.4)':'1px solid var(--border)'}}
+                          onClick={()=>setNextStepsOpen(nextStepsOpen===c.id?null:c.id)}>
+                          → {c.nextSteps ? 'Next Steps' : 'Next Steps'}
+                        </button>
                         <select className="btn btn-secondary btn-sm" style={{cursor:'pointer',fontSize:12}}
                           value=""
                           onChange={e=>{
@@ -1410,6 +1409,27 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                         </select>
                         <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Delete '+c.name+'?'))setCandidates(cs=>cs.filter(x=>x.id!==c.id))}}>✕</button>
                       </div>
+                      {nextStepsOpen===c.id && (
+                        <div style={{marginTop:10,padding:'12px',background:'var(--surface2)',border:'1px solid rgba(79,142,247,.3)',borderRadius:10}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>→ Next Steps</div>
+                          <textarea
+                            autoFocus
+                            placeholder="e.g. Schedule 2nd round, Send take-home, Loop in hiring manager..."
+                            value={c.nextSteps||''}
+                            onChange={e=>setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,nextSteps:e.target.value}:x))}
+                            style={{minHeight:70,fontSize:12,marginBottom:c.nextSteps?8:0}}
+                          />
+                          {c.nextSteps && (
+                            <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                              {c.nextSteps.split(/[
+,;]+/).map(function(step,i){
+                                var s = step.trim();
+                                return s ? <span key={i} style={{fontSize:11,padding:'2px 8px',borderRadius:20,background:'rgba(79,142,247,.1)',border:'1px solid rgba(79,142,247,.25)',color:'var(--accent)',fontWeight:500}}>→ {s}</span> : null;
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>;
                 })}
@@ -2748,27 +2768,6 @@ function InterviewsView({ candidates, setCandidates, positions }) {
         </div>
 
         <TranscriptImport selCand={selCand} setCandidates={setCandidates}/>
-
-        <div className="card mb-4">
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-            <div className="section-title" style={{margin:0}}>Next Steps</div>
-            {cand.nextSteps && <span style={{fontSize:10,color:'var(--accent3)',fontWeight:600}}>Saved</span>}
-          </div>
-          <textarea
-            placeholder="What happens next? e.g. Schedule 2nd round, Send take-home, Loop in hiring manager..."
-            value={cand.nextSteps||''}
-            onChange={e=>setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,nextSteps:e.target.value}:c))}
-            style={{minHeight:80}}
-          />
-          {cand.nextSteps && (
-            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:10}}>
-              {cand.nextSteps.split(/[\n,;]+/).map(function(step,i){
-                var s = step.trim();
-                return s ? <span key={i} style={{fontSize:12,padding:'3px 10px',borderRadius:20,background:'rgba(79,142,247,.1)',border:'1px solid rgba(79,142,247,.25)',color:'var(--accent)'}}>{s}</span> : null;
-              })}
-            </div>
-          )}
-        </div>
 
         <div className="card">
           <div className="section-title">Interview Timeline ({(cand.interviewNotes||[]).length} notes)</div>
