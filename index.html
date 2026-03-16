@@ -786,6 +786,7 @@ function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) 
 function PositionsView({ positions, setPositions, requirements: reqLib, candidates }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [openTab, setOpenTab] = useState('details');
 
   return (
     <div className="page">
@@ -849,6 +850,7 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
       {showModal && <PositionModal
         position={editing}
         reqLib={reqLib}
+        initialTab={openTab}
         onSave={p=>{
           if (editing) setPositions(ps=>ps.map(x=>x.id===p.id?p:x));
           else setPositions(ps=>[...ps,{...p,id:uid(),createdAt:today(),status:'Open'}]);
@@ -1025,7 +1027,7 @@ function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
                 </div>
               </div>
             </div>
-            {form.requirements.map(req=>(
+            {[...form.requirements].sort(function(a,b){ if(a.mustHave&&!b.mustHave) return -1; if(!a.mustHave&&b.mustHave) return 1; if((b.weight||1)!==(a.weight||1)) return (b.weight||1)-(a.weight||1); return a.name.localeCompare(b.name); }).map(req=>(
               <div key={req.id} className="req-row">
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:500}}>{req.name}</div>
