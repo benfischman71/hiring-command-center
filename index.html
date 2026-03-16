@@ -1398,7 +1398,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                             {positions.map(p=><option key={p.id} value={'move_'+p.id}>{p.title}</option>)}
                           </optgroup>
                         </select>
-                        <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Delete '+c.name+'?'))setCandidates(cs=>cs.filter(x=>x.id!==c.id))}}>✕</button>
+                        <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Are you sure you want to delete ' + c.name + '? This will permanently remove the candidate and all their scores, notes, and interview data.'))setCandidates(cs=>cs.filter(x=>x.id!==c.id))}}>✕</button>
                       </div>
                       {nextStepsOpen===c.id && (
                         <div style={{marginTop:10,padding:'12px',background:'var(--surface2)',border:'1px solid rgba(79,142,247,.3)',borderRadius:10}}>
