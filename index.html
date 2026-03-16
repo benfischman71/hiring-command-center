@@ -1065,9 +1065,7 @@ function ShareWithTeamModal({ candidate, positions, onClose }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
         body: JSON.stringify({
-          prompt: 'You are helping a hiring team share a candidate summary. Consolidate the following notes about ' + candidate.name + ' into a clean, professional 3-5 sentence summary. Focus on key strengths, relevant experience, and any standout observations. Be concise and factual. Notes:
-
-' + allRawNotes.slice(0, 5000),
+          prompt: 'You are helping a hiring team share a candidate summary. Consolidate the following notes about ' + candidate.name + ' into a clean, professional 3-5 sentence summary. Focus on key strengths, relevant experience, and any standout observations. Be concise and factual. Notes: ' + allRawNotes.slice(0, 5000),
           max_tokens: 600
         })
       });
