@@ -490,7 +490,7 @@ function calcWeightedScore(scores, requirements) {
   for (const req of requirements) {
     const s = scores[req.id];
     // Disqualify if Must Have and score is 1 (Does Not Meet) or unscored
-    if (req.mustHave && (!s || !s.score || s.score === 1)) return -1;
+    if (req.mustHave && s && s.score === 1) return -1;
     if (s && s.score) {
       const w = req.weight || 1;
       total += s.score * w;
