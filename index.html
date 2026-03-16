@@ -1345,12 +1345,120 @@ function CandidateProfileModal({ candidate, positions, onEdit, onClose, setCandi
   );
 }
 
+function CandidateExportModal({ candidates, positions, onClose }) {
+  const [copied, setCopied] = useState('');
+  var NL = String.fromCharCode(10);
+
+  var buildEmail = function() {
+    var lines = [];
+    lines.push('CANDIDATE PIPELINE — ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}));
+    lines.push('');
+    lines.push('NAME                          POSITION              STAGE               LINKEDIN');
+    lines.push('—'.repeat(90));
+    candidates.forEach(function(c) {
+      var pos = positions.find(function(p){return p.id===c.positionId;});
+      var name = (c.name||'').padEnd(30);
+      var posTitle = (pos?pos.title:'—').padEnd(22);
+      var stage = (c.stage||'—').padEnd(20);
+      var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : '—';
+      lines.push(name + posTitle + stage + li);
+    });
+    lines.push('');
+    lines.push(candidates.length + ' candidate' + (candidates.length!==1?'s':'') + ' total');
+    return lines.join(NL);
+  };
+
+  var buildSlack = function() {
+    var lines = [];
+    lines.push('*Candidate Pipeline — ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '*');
+    lines.push('');
+    candidates.forEach(function(c) {
+      var pos = positions.find(function(p){return p.id===c.positionId;});
+      var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : null;
+      var line = '*' + (c.name||'Unknown') + '* — ' + (pos?pos.title:'No position') + ' · _' + (c.stage||'—') + '_';
+      if (li) line += ' · <' + li + '|LinkedIn>';
+      lines.push(line);
+    });
+    lines.push('');
+    lines.push('_' + candidates.length + ' candidate' + (candidates.length!==1?'s':'') + ' total_');
+    return lines.join(NL);
+  };
+
+  var copy = function(type) {
+    var text = type==='slack' ? buildSlack() : buildEmail();
+    navigator.clipboard.writeText(text).then(function(){
+      setCopied(type);
+      setTimeout(function(){setCopied('');}, 2500);
+    });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={function(e){e.target===e.currentTarget&&onClose();}}>
+      <div className="modal" style={{maxWidth:620}}>
+        <div className="modal-header">
+          <div className="modal-title">📋 Export Candidate List</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div style={{display:'flex',gap:8,marginBottom:16}}>
+            <button className="btn btn-sm" style={{flex:1,justifyContent:'center',background:'rgba(45,212,160,.1)',color:'#2dd4a0',border:'1px solid rgba(45,212,160,.3)',fontWeight:700}}
+              onClick={function(){copy('email');}}>
+              {copied==='email' ? '✅ Copied!' : '📧 Copy for Email'}
+            </button>
+            <button className="btn btn-sm" style={{flex:1,justifyContent:'center',background:'rgba(79,142,247,.1)',color:'var(--accent)',border:'1px solid rgba(79,142,247,.3)',fontWeight:700}}
+              onClick={function(){copy('slack');}}>
+              {copied==='slack' ? '✅ Copied!' : '💬 Copy for Slack'}
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+            <div style={{padding:'10px 16px',background:'var(--surface3)',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em'}}>Preview — {candidates.length} candidate{candidates.length!==1?'s':''}</div>
+              <div style={{fontSize:10,color:'var(--muted)'}}>{new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>
+            </div>
+            <div style={{padding:'14px 16px',display:'flex',flexDirection:'column',gap:8,maxHeight:400,overflowY:'auto'}}>
+              {candidates.map(function(c) {
+                var pos = positions.find(function(p){return p.id===c.positionId;});
+                var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : null;
+                return (
+                  <div key={c.id} style={{display:'flex',alignItems:'center',gap:12,padding:'8px 10px',background:'var(--surface3)',borderRadius:8,flexWrap:'wrap'}}>
+                    <div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,var(--accent),var(--accent2))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>
+                      {(c.name||'?').split(' ').map(function(n){return n[0];}).join('').slice(0,2).toUpperCase()}
+                    </div>
+                    <div style={{flex:1,minWidth:120}}>
+                      <div style={{fontWeight:600,fontSize:13}}>{c.name}</div>
+                      <div style={{fontSize:11,color:'var(--muted)'}}>{pos?pos.title:'—'}</div>
+                    </div>
+                    <span className={'badge ' + (STAGE_COLORS[c.stage]||'badge-gray')} style={{fontSize:11,flexShrink:0}}>{c.stage}</span>
+                    {li
+                      ? <a href={li} target="_blank" rel="noopener noreferrer"
+                          style={{fontSize:11,color:'#0a66c2',fontWeight:600,textDecoration:'none',background:'rgba(10,102,194,.1)',padding:'2px 8px',borderRadius:20,flexShrink:0}}>
+                          💼 LinkedIn
+                        </a>
+                      : <span style={{fontSize:11,color:'var(--muted)',flexShrink:0}}>No LinkedIn</span>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{fontSize:11,color:'var(--muted)',textAlign:'center',marginTop:10}}>
+            List reflects current filters · Slack format uses linked mentions
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CandidatesView({ candidates, setCandidates, positions, initialFilter, onFilterUsed, setView }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [viewingProfile, setViewingProfile] = useState(null);
   const [sharingCandidate, setSharingCandidate] = useState(null);
   const [nextStepsOpen, setNextStepsOpen] = useState(null);
+  const [showExport, setShowExport] = useState(false);
   const [filterPos, setFilterPos] = useState(initialFilter||'all');
   const [filterStage, setFilterStage] = useState('all');
   useEffect(()=>{ if(initialFilter&&initialFilter!=='all'){setFilterPos(initialFilter);onFilterUsed&&onFilterUsed();} },[initialFilter]);
@@ -1369,7 +1477,10 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
           <div className="page-title">Candidates</div>
           <div className="page-sub">{filtered.length} showing</div>
         </div>
-        <button className="btn btn-primary" onClick={()=>{setEditing(null);setShowModal(true)}}>+ Add Candidate</button>
+        <div className="flex gap-2">
+          <button className="btn btn-secondary" onClick={()=>setShowExport(true)}>📋 Export List</button>
+          <button className="btn btn-primary" onClick={()=>{setEditing(null);setShowModal(true)}}>+ Add Candidate</button>
+        </div>
       </div>
       <div className="flex gap-2 mb-4">
         <select value={filterPos} onChange={e=>setFilterPos(e.target.value)} style={{maxWidth:220}}>
@@ -1481,6 +1592,13 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
             </table></div>
           </div>
       }
+      {showExport && (
+        <CandidateExportModal
+          candidates={filtered}
+          positions={positions}
+          onClose={()=>setShowExport(false)}
+        />
+      )}
       {viewingProfile && (
         <CandidateProfileModal
           candidate={candidates.find(function(c){return c.id===viewingProfile.id;})||viewingProfile}
@@ -2863,7 +2981,7 @@ function InterviewsView({ candidates, setCandidates, positions }) {
                 setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]).filter(n=>!oldIds.includes(n.id)),cleanedNote]}:c));
               }
             } catch(e) { alert('Could not clean notes: ' + e.message); }
-          }), editNote)}
+          }, editNote)}
         </div>
       </>}
     </div>
