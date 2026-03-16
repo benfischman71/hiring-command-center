@@ -2047,15 +2047,25 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
           }
           throw new Error(errMsg);
         }
-        const rawText = Array.isArray(data.content)
-          ? data.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('')
-          : (data.text || '');
-        if (!rawText.trim()) throw new Error('Empty response — please deploy the updated claude-proxy.ts and try again.');
-        applyParsed(JSON.parse(rawText.replace(/```json|```/g,'').trim()));
+        // Proxy normalises to .text — prefer that, fall back to .content array
+        var rawText = '';
+        if (data.text && data.text.trim()) {
+          rawText = data.text;
+        } else if (Array.isArray(data.content)) {
+          rawText = data.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('');
+        }
+        if (!rawText.trim()) throw new Error('No response from Claude. Check that the claude-proxy Edge Function is deployed with image support.');
+        var cleaned = rawText.replace(/```json|```/g,'').trim();
+        // Find JSON object in response (Claude sometimes adds preamble)
+        var jsonStart = cleaned.indexOf('{');
+        var jsonEnd = cleaned.lastIndexOf('}');
+        if (jsonStart !== -1 && jsonEnd !== -1) cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
+        applyParsed(JSON.parse(cleaned));
       }
       setAiImportMode('done');
     } catch(e) {
       setResumeError('Could not parse file: ' + e.message);
+      setAiImportMode('resume'); // keep drop zone open so error is visible
     }
     setResumeLoading(false);
   };
