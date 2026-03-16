@@ -1451,7 +1451,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
    PARSED PROFILE CARD
    ═══════════════════════════════════════ */
 function ParsedProfileCard({ profile, onClear, onDismiss }) {
-  const [collapsed, setCollapsed] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(true);
   if (!profile) return null;
   var clearFn = onClear || onDismiss;
 
