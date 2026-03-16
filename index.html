@@ -1351,35 +1351,42 @@ function CandidateExportModal({ candidates, positions, onClose }) {
 
   var buildEmail = function() {
     var lines = [];
-    lines.push('CANDIDATE PIPELINE — ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}));
+    var date = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    lines.push('Candidate Pipeline — ' + date);
     lines.push('');
-    lines.push('NAME                          POSITION              STAGE               LINKEDIN');
-    lines.push('—'.repeat(90));
     candidates.forEach(function(c) {
       var pos = positions.find(function(p){return p.id===c.positionId;});
-      var name = (c.name||'').padEnd(30);
-      var posTitle = (pos?pos.title:'—').padEnd(22);
-      var stage = (c.stage||'—').padEnd(20);
-      var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : '—';
-      lines.push(name + posTitle + stage + li);
+      var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : null;
+      lines.push((c.name||'Unknown') + ' — ' + (pos?pos.title:'—') + ' — ' + (c.stage||'—'));
+      if (li) lines.push('  LinkedIn: ' + li);
+      lines.push('');
     });
-    lines.push('');
     lines.push(candidates.length + ' candidate' + (candidates.length!==1?'s':'') + ' total');
     return lines.join(NL);
   };
 
   var buildSlack = function() {
     var lines = [];
-    lines.push('*Candidate Pipeline — ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '*');
+    var date = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    lines.push('*:busts_in_silhouette: Candidate Pipeline — ' + date + '*');
     lines.push('');
+    var byPosition = {};
     candidates.forEach(function(c) {
       var pos = positions.find(function(p){return p.id===c.positionId;});
-      var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : null;
-      var line = '*' + (c.name||'Unknown') + '* — ' + (pos?pos.title:'No position') + ' · _' + (c.stage||'—') + '_';
-      if (li) line += ' · <' + li + '|LinkedIn>';
-      lines.push(line);
+      var key = pos ? pos.title : 'No Position';
+      if (!byPosition[key]) byPosition[key] = [];
+      byPosition[key].push(c);
     });
-    lines.push('');
+    Object.keys(byPosition).forEach(function(posTitle) {
+      lines.push('*' + posTitle + '*');
+      byPosition[posTitle].forEach(function(c) {
+        var li = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : null;
+        var line = '  • *' + (c.name||'Unknown') + '* · _' + (c.stage||'—') + '_';
+        if (li) line += ' · ' + li;
+        lines.push(line);
+      });
+      lines.push('');
+    });
     lines.push('_' + candidates.length + ' candidate' + (candidates.length!==1?'s':'') + ' total_');
     return lines.join(NL);
   };
