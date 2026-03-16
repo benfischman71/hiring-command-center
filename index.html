@@ -202,6 +202,7 @@ tr:hover td{background:var(--surface2)}
 .req-category{font-size:11px;color:var(--muted)}
 .weight-select{background:var(--surface);border:1px solid var(--border);border-radius:6px;
   padding:4px 8px;color:var(--text);font-size:12px;font-weight:600;cursor:pointer}
+.tooltip-wrap:hover .tooltip-body{opacity:1!important;pointer-events:auto!important}
 .must-toggle{width:20px;height:20px;border-radius:4px;border:1.5px solid var(--border);
   background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;
   font-size:12px;transition:all .2s}
@@ -1025,18 +1026,47 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
           {tab==='requirements' && <>
             <div className="section-title">Position Requirements ({form.requirements.length})</div>
             {form.requirements.length===0 && <div className="text-muted text-sm mb-3">No requirements added yet. Add from library or create custom.</div>}
+            {/* Requirements header legend */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:16,marginBottom:8,paddingRight:4}}>
+              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10,color:'var(--muted)'}}>
+                <span>Weight</span>
+                <div style={{position:'relative',display:'inline-block'}} className="tooltip-wrap">
+                  <span style={{cursor:'help',color:'var(--accent)',fontWeight:700,fontSize:11}}>?</span>
+                  <div style={{position:'absolute',right:0,top:16,width:220,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:11,color:'var(--text2)',lineHeight:1.5,zIndex:100,pointerEvents:'none',opacity:0,transition:'opacity .15s'}} className="tooltip-body">
+                    <strong style={{color:'var(--text)'}}>1× Standard</strong> — normal importance<br/>
+                    <strong style={{color:'var(--accent)'}}>2× Important</strong> — counts double<br/>
+                    <strong style={{color:'var(--accent2)'}}>3× Critical</strong> — counts triple; use for your top 1-2 must-win criteria
+                  </div>
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10,color:'var(--muted)'}}>
+                <span>Must Have</span>
+                <div style={{position:'relative',display:'inline-block'}} className="tooltip-wrap">
+                  <span style={{cursor:'help',color:'var(--accent)',fontWeight:700,fontSize:11}}>?</span>
+                  <div style={{position:'absolute',right:0,top:16,width:230,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:11,color:'var(--text2)',lineHeight:1.5,zIndex:100,pointerEvents:'none',opacity:0,transition:'opacity .15s'}} className="tooltip-body">
+                    <strong style={{color:'var(--red)'}}>Hard gate:</strong> if a candidate scores 1 (Does Not Meet) on this, they are automatically <strong>Disqualified</strong> — regardless of how well they score elsewhere.<br/><br/>
+                    Best combined with <strong style={{color:'var(--accent2)'}}>3× weight</strong> for your most critical requirement.
+                  </div>
+                </div>
+              </div>
+            </div>
             {form.requirements.map(req=>(
               <div key={req.id} className="req-row">
                 <div style={{flex:1}}>
                   <div style={{fontSize:13,fontWeight:500}}>{req.name}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <select className="weight-select" value={req.weight} onChange={e=>updateReq(req.id,'weight',Number(e.target.value))}>
-                    <option value={1}>1× weight</option>
-                    <option value={2}>2× weight</option>
-                    <option value={3}>3× weight</option>
+                  <select className="weight-select" value={req.weight}
+                    title={req.weight===3?'3x Critical — counts triple toward score':req.weight===2?'2x Important — counts double':'1x Standard weight'}
+                    style={{color:req.weight===3?'var(--accent2)':req.weight===2?'var(--accent)':'',fontWeight:req.weight>1?700:400}}
+                    onChange={e=>updateReq(req.id,'weight',Number(e.target.value))}>
+                    <option value={1}>1× Standard</option>
+                    <option value={2}>2× Important</option>
+                    <option value={3}>3× Critical</option>
                   </select>
-                  <button className={`must-toggle ${req.mustHave?'on':''}`} onClick={()=>updateReq(req.id,'mustHave',!req.mustHave)} title={req.mustHave?'Must Have (click to remove)':'Set as Must Have'}>
+                  <button className={'must-toggle ' + (req.mustHave?'on':'')}
+                    onClick={()=>updateReq(req.id,'mustHave',!req.mustHave)}
+                    title={req.mustHave?'Must Have: score of 1 = auto-disqualified (click to remove)':'Click to make this a hard gate — score of 1 disqualifies candidate'}>
                     {req.mustHave?'🚫':'○'}
                   </button>
                   <button className="btn btn-ghost btn-xs" onClick={()=>removeReq(req.id)}>✕</button>
