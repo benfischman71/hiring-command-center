@@ -1182,6 +1182,16 @@ function CandidateProfileModal({ candidate, positions, onEdit, onClose, setCandi
             )}
           </div>
 
+          {/* Rich Profile — at top, collapsed by default */}
+          {candidate.richProfile
+            ? <div style={{marginBottom:12}}><ParsedProfileCard profile={candidate.richProfile} /></div>
+            : <div style={{textAlign:'center',padding:'8px 0 12px'}}>
+                <button className="btn btn-sm" style={{background:'rgba(79,142,247,.1)',color:'var(--accent)',border:'1px solid rgba(79,142,247,.25)'}} onClick={onEdit}>
+                  ✨ Build Full Profile
+                </button>
+              </div>
+          }
+
           {/* Contact */}
           <div className="card" style={{marginBottom:12}}>
             <div className="section-title">Contact</div>
@@ -1272,26 +1282,7 @@ function CandidateProfileModal({ candidate, positions, onEdit, onClose, setCandi
             </div>
           )}
 
-          {/* Rich Profile — show if saved */}
-          {candidate.richProfile && (
-            <div style={{marginTop:4}}>
-              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
-                <div style={{flex:1,height:1,background:'var(--border)'}}/>
-                <div style={{fontSize:10,color:'var(--muted)',fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em'}}>Full Profile</div>
-                <div style={{flex:1,height:1,background:'var(--border)'}}/>
-              </div>
-              <ParsedProfileCard profile={candidate.richProfile} />
-            </div>
-          )}
 
-          {!candidate.richProfile && (
-            <div style={{textAlign:'center',padding:'12px 0'}}>
-              <div style={{fontSize:12,color:'var(--muted)',marginBottom:8}}>No full profile yet</div>
-              <button className="btn btn-sm" style={{background:'rgba(79,142,247,.1)',color:'var(--accent)',border:'1px solid rgba(79,142,247,.25)'}} onClick={onEdit}>
-                ✨ Build Profile
-              </button>
-            </div>
-          )}
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Close</button>
@@ -1421,8 +1412,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                           />
                           {c.nextSteps && (
                             <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                              {c.nextSteps.split(/[
-,;]+/).map(function(step,i){
+                              {c.nextSteps.split(/[\n,;]+/).map(function(step,i){
                                 var s = step.trim();
                                 return s ? <span key={i} style={{fontSize:11,padding:'2px 8px',borderRadius:20,background:'rgba(79,142,247,.1)',border:'1px solid rgba(79,142,247,.25)',color:'var(--accent)',fontWeight:500}}>→ {s}</span> : null;
                               })}
