@@ -3369,11 +3369,49 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
       {selCand && cand && <>
         <div className="card mb-4">
           <div className="section-title">Shareable Scorecard Link</div>
-          <div className="text-muted text-sm mb-3">Send this link to interviewers. They can submit their scores without needing an account.</div>
+          <div className="text-muted text-sm mb-3">Send this link to interviewers — they can score without an account.</div>
+
+          {/* Interview team links */}
+          {(cand.interviewers||[]).length > 0 && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Interview Team Links</div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {(cand.interviewers||[]).map(function(iv){
+                  var ivLink = shareLink + '&interviewer=' + encodeURIComponent(iv.name);
+                  return (
+                    <div key={iv.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)'}}>
+                      <div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,var(--accent),var(--accent2))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>
+                        {iv.name.split(' ').map(function(n){return n[0];}).join('').slice(0,2).toUpperCase()}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,fontSize:12}}>{iv.name}</div>
+                        {iv.role && <div style={{fontSize:10,color:'var(--muted)'}}>{iv.role}</div>}
+                      </div>
+                      <button className="btn btn-primary btn-xs" onClick={function(){
+                        navigator.clipboard.writeText(ivLink);
+                        setCopied(iv.id);
+                        setTimeout(function(){setCopied(false);},2000);
+                      }}>{copied===iv.id?'✓ Copied!':'📋 Copy Link'}</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Generic link */}
+          <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>
+            {(cand.interviewers||[]).length > 0 ? 'Generic Link' : 'Scorecard Link'}
+          </div>
           <div className="share-code-box">
             <div className="share-code" style={{fontSize:13,wordBreak:'break-all'}}>{shareLink}</div>
-            <button className="btn btn-primary btn-sm" onClick={copy}>{copied?'✓ Copied!':'📋 Copy'}</button>
+            <button className="btn btn-primary btn-sm" onClick={copy}>{copied===true?'✓ Copied!':'📋 Copy'}</button>
           </div>
+          {(cand.interviewers||[]).length === 0 && (
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>
+              Tip: Add interviewers to this candidate in the Candidates page to get per-person links.
+            </div>
+          )}
         </div>
 
         <div className="card">
@@ -3404,11 +3442,14 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
    ═══════════════════════════════════════ */
 function ExternalScorecard({ candidateId, candidates, setCandidates, positions }) {
   const [step, setStep] = useState(1);
-  const [evaluator, setEvaluator] = useState({ name:'', email:'' });
+  const urlInterviewer = new URLSearchParams(window.location.search).get('interviewer') || '';
+  const [evaluator, setEvaluator] = useState({ name: urlInterviewer, email:'' });
   const [scores, setScores] = useState({});
   const [recommendation, setRecommendation] = useState('');
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  const [showJD, setShowJD] = useState(false);
 
   const cand = candidates.find(c=>c.id===candidateId);
   const pos = cand ? positions.find(p=>p.id===cand.positionId) : null;
@@ -3432,7 +3473,6 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
   );
 
   const liUrl = cand.linkedIn ? (cand.linkedIn.startsWith('http') ? cand.linkedIn : 'https://' + cand.linkedIn) : null;
-  const [showJD, setShowJD] = useState(false);
 
   return (
     <div className="external-bg">
