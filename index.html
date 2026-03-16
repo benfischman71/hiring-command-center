@@ -810,7 +810,14 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
                     <td><div style={{fontWeight:600}}>{p.title}</div><div className="text-xs text-muted mt-1">{p.location||'Remote'}</div></td>
                     <td>{p.department||'—'}</td>
                     <td>{candidates.filter(c=>c.positionId===p.id).length}</td>
-                    <td>{p.requirements?.length||0} criteria</td>
+                    <td>
+                      <button
+                        className="btn btn-ghost btn-xs"
+                        style={{fontWeight:500,color:'var(--text2)',padding:'2px 6px'}}
+                        onClick={()=>{setEditing(p);setOpenTab('requirements');setShowModal(true);}}>
+                        {p.requirements?.length||0} criteria →
+                      </button>
+                    </td>
                     <td>
                       <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                         {p.jd
@@ -829,7 +836,7 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
                     <td><span className={'badge ' + (p.status==='Open'?'badge-green':'badge-gray')}>{p.status}</span></td>
                     <td>
                       <div className="flex gap-2">
-                        <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>{setEditing(p);setShowModal(true)}}>✏️ Edit</button>
+                        <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={()=>{setEditing(p);setOpenTab('details');setShowModal(true)}}>✏️ Edit</button>
                         <button className="btn btn-ghost btn-sm" style={{color:'var(--muted)',fontSize:11}} onClick={()=>{if(window.confirm('Delete this position?'))setPositions(ps=>ps.filter(x=>x.id!==p.id))}}>Delete</button>
                       </div>
                     </td>
@@ -912,51 +919,19 @@ function JDTab({ form, update, extractFromJD, extracting, setExtracting }) {
               e.target.value='';
             }}/>
           <textarea style={{minHeight:160}} placeholder="...or paste your job description here" value={form.jd} onChange={function(e){update('jd',e.target.value);}}/>
-          <div className="flex gap-2 mt-2" style={{flexWrap:'wrap'}}>
-            <button className="btn btn-purple" onClick={extractFromJD} disabled={extracting||!form.jd}>
-              {extracting ? '⏳ Extracting...' : '✨ Extract Requirements with AI'}
-            </button>
-            <button className="btn btn-secondary" onClick={function(){
-              if (!form.jd) return;
-              var t = form.jd;
-              t = t.replace(/([a-z\.\!\?])([A-Z])/g, '$1 $2');
-              t = t.replace(/\s+●\s+/g, ' ● ');
-              t = t.replace(/\s+•\s+/g, ' • ');
-              update('jd', t);
-            }}>
-              📐 Format Text
-            </button>
-            <button className="btn btn-secondary" onClick={async function(){
-              if (!form.jd||form.jd.length<20) return;
-              setExtracting(true);
-              try {
-                var response = await fetch('https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy', {
-                  method:'POST',
-                  headers:{'Content-Type':'application/json','Authorization':'Bearer ' + SUPABASE_ANON_KEY},
-                  body:JSON.stringify({prompt:'Clean up this text into a readable job description. Remove PDF artifacts and binary characters. Return only clean text: ' + form.jd.slice(0,4000)})
-                });
-                var data = await response.json();
-                if (data.error) throw new Error(data.error);
-                update('jd', data.text);
-                setShowEditor(false);
-              } catch(e) { alert('Could not clean text. Please paste manually.'); }
-              setExtracting(false);
-            }} disabled={extracting||!form.jd}>
-              🧹 Clean up with Claude
-            </button>
-          </div>
+
         </div>
       )}
     </div>
   );
 }
 
-function PositionModal({ position, reqLib, onSave, onClose }) {
+function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
   const [form, setForm] = useState(position || { title:'', department:'', location:'', jd:'', requirements:[], status:'Open' });
   const [jdInput, setJdInput] = useState('');
   const [extracting, setExtracting] = useState(false);
   const [customReq, setCustomReq] = useState('');
-  const [tab, setTab] = useState('details');
+  const [tab, setTab] = useState(initialTab || 'details');
   const update = (k,v) => setForm(f=>({...f,[k]:v}));
 
   const extractFromJD = () => {
@@ -1095,11 +1070,50 @@ function PositionModal({ position, reqLib, onSave, onClose }) {
             ))}
           </>}
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={()=>form.title&&onSave(form)} disabled={!form.title}>
-            {position?'Save Changes':'Create Position'}
-          </button>
+        <div className="modal-footer" style={{flexWrap:'wrap',gap:8,alignItems:'center'}}>
+          <div className="flex gap-2" style={{flex:1,flexWrap:'wrap'}}>
+            <button className="btn btn-purple btn-sm" onClick={extractFromJD} disabled={extracting||!form.jd}
+              title={!form.jd ? 'Add a job description first' : ''}>
+              {extracting ? '⏳ Extracting...' : '✨ Extract Requirements with AI'}
+            </button>
+            <button className="btn btn-secondary btn-sm" disabled={!form.jd}
+              title={!form.jd ? 'Add a job description first' : 'Auto-format text'}
+              onClick={function(){
+                if (!form.jd) return;
+                var t = form.jd;
+                t = t.replace(/([a-z\.\!\?])([A-Z])/g, '$1 $2');
+                t = t.replace(/\s+●\s+/g, ' ● ');
+                t = t.replace(/\s+•\s+/g, ' • ');
+                update('jd', t);
+              }}>
+              📐 Format Text
+            </button>
+            <button className="btn btn-secondary btn-sm" disabled={extracting||!form.jd}
+              title={!form.jd ? 'Add a job description first' : 'Clean up with Claude'}
+              onClick={async function(){
+                if (!form.jd||form.jd.length<20) return;
+                setExtracting(true);
+                try {
+                  var response = await fetch('https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Authorization':'Bearer ' + SUPABASE_ANON_KEY},
+                    body:JSON.stringify({prompt:'Clean up this text into a readable job description. Remove PDF artifacts and binary characters. Return only clean text: ' + form.jd.slice(0,4000)})
+                  });
+                  var data = await response.json();
+                  if (data.error) throw new Error(data.error);
+                  update('jd', data.text);
+                } catch(e) { alert('Could not clean text.'); }
+                setExtracting(false);
+              }}>
+              🧹 Clean up with Claude
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button className="btn btn-primary" onClick={()=>form.title&&onSave(form)} disabled={!form.title}>
+              {position?'Save Changes':'Create Position'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
