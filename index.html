@@ -813,7 +813,7 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
                     <td>
                       <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
                         {p.jd
-                          ? <a href="#" onClick={function(e){e.preventDefault();var w=window.open('','_blank');w.document.write('<pre style="font-family:sans-serif;max-width:800px;margin:40px auto;white-space:pre-wrap;line-height:1.6">'+p.jd.replace(/</g,'&lt;')+'</pre>');w.document.title=p.title+' - JD';}}
+                          ? <a href="#" onClick={function(e){e.preventDefault();var w=window.open('','_blank');w.document.write('<pre style="font-family:sans-serif;max-width:800px;margin:40px auto;white-space:pre-wrap;line-height:1.6">'+p.jd.split('<').join('&lt;')+'</pre>');w.document.title=p.title+' - JD';}}
                               title="View JD"
                               style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:8,background:'rgba(45,212,160,.15)',border:'1px solid rgba(45,212,160,.35)',textDecoration:'none',fontSize:14}}>
                               ✓
@@ -1160,7 +1160,7 @@ function ShareWithTeamModal({ candidate, positions, onClose }) {
               <div style={{display:'flex',gap:10,marginTop:10,flexWrap:'wrap',alignItems:'center'}}>
                 <span className={'badge '+(STAGE_COLORS[candidate.stage]||'badge-gray')}>{candidate.stage}</span>
                 {liUrl&&<a href={liUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:'#0a66c2',fontWeight:600,textDecoration:'none',background:'rgba(10,102,194,.1)',padding:'2px 8px',borderRadius:20}}>LinkedIn</a>}
-                {pos&&pos.jd&&<button className="btn btn-xs" style={{background:'rgba(124,92,252,.1)',color:'var(--accent2)',border:'1px solid rgba(124,92,252,.25)'}} onClick={function(){var w=window.open('','_blank');w.document.write('<pre style="font-family:sans-serif;max-width:800px;margin:40px auto;white-space:pre-wrap">'+pos.jd.replace(/</g,'&lt;')+'</pre>');w.document.title=pos.title+' - JD';}}>View JD</button>}
+                {pos&&pos.jd&&<button className="btn btn-xs" style={{background:'rgba(124,92,252,.1)',color:'var(--accent2)',border:'1px solid rgba(124,92,252,.25)'}} onClick={function(){var w=window.open('','_blank');w.document.write('<pre style="font-family:sans-serif;max-width:800px;margin:40px auto;white-space:pre-wrap">'+pos.jd.split('<').join('&lt;')+'</pre>');w.document.title=pos.title+' - JD';}}>View JD</button>}
               </div>
             </div>
             <div style={{padding:'14px 20px',display:'flex',flexDirection:'column',gap:12}}>
@@ -1434,7 +1434,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                             if (action==='scorecard') { setView('scorecards'); }
                             if (action==='references') { setView('references'); }
                             if (action==='share') { setSharingCandidate(c); }
-                            if (action==='viewjd') { const p=positions.find(function(x){return x.id===c.positionId;}); if(p&&p.jd){var w=window.open('','_blank');w.document.write('<pre style="font-family:sans-serif;max-width:800px;margin:40px auto;white-space:pre-wrap;line-height:1.6">'+p.jd.replace(/</g,'&lt;')+'</pre>');w.document.title=p.title+' - Job Description';} }
+                            if (action==='viewjd') { const p=positions.find(function(x){return x.id===c.positionId;}); if(p&&p.jd){var w=window.open('','_blank');var safe=p.jd.split('<').join('&lt;');w.document.write('<pre style="font-family:sans-serif;max-width:800px;margin:40px auto;white-space:pre-wrap;line-height:1.6">'+safe+'</pre>');w.document.title=p.title+' - Job Description';} }
                             if (action.startsWith('move_')) { const pid=action.replace('move_',''); setCandidates(cs=>cs.map(x=>x.id===c.id?{...x,positionId:pid,scores:{}}:x)); }
                             e.target.value='';
                           }}>
