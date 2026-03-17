@@ -815,9 +815,26 @@ function PositionsView({ positions, setPositions, requirements: reqLib, setRequi
                     <td>
                       <button
                         className="btn btn-ghost btn-xs"
-                        style={{fontWeight:500,color:'var(--text2)',padding:'2px 6px'}}
+                        style={{fontWeight:600,padding:'2px 6px',color:(()=>{
+                          var active=(p.requirements||[]).filter(function(r){return r.active!==false;}).length;
+                          var total=p.requirements?.length||0;
+                          if(total===0) return 'var(--muted)';
+                          if(active===8) return 'var(--accent3)';
+                          if(active>8) return 'var(--yellow)';
+                          if(active<4) return 'var(--red)';
+                          return 'var(--text2)';
+                        })()}}
                         onClick={()=>{setEditing(p);setOpenTab('requirements');setShowModal(true);}}>
-                        {p.requirements?.length||0} criteria →
+                        {(()=>{
+                          var active=(p.requirements||[]).filter(function(r){return r.active!==false;}).length;
+                          var total=p.requirements?.length||0;
+                          if(total===0) return '+ Add requirements';
+                          if(active===8) return '8/8 scored ✓';
+                          if(active>8) return active+'/8 scored — bench '+(active-8);
+                          if(active===0) return total+' saved, none scored';
+                          var diff=8-active;
+                          return active+'/8 scored'+(diff>0?' — '+diff+' more?':'');
+                        })()}
                       </button>
                     </td>
                     <td>
