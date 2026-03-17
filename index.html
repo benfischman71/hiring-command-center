@@ -1065,7 +1065,7 @@ function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
                       className="btn btn-xs"
                       style={{fontWeight:600,minWidth:70,background:req.active===false?(atMax?'var(--surface3)':'rgba(45,212,160,.1)'):'rgba(124,92,252,.1)',color:req.active===false?(atMax?'var(--muted)':'var(--accent3)'):'var(--accent2)',border:'1px solid '+(req.active===false?(atMax?'var(--border)':'rgba(45,212,160,.3)'):'rgba(124,92,252,.3)')}}
                       disabled={req.active===false&&atMax}
-                      title={req.active===false?(atMax?'Remove one active requirement first to add more':'Add to scored requirements'):'Move to bench (keep but don't score)'}
+                      title={req.active===false?(atMax?'Remove one active requirement first to add more':'Add to scored requirements'):'Move to bench (keep, not scored)'}
                       onClick={()=>updateReq(req.id,'active',req.active===false?true:false)}>
                       {req.active===false?(atMax?'Bench full':'+ Activate'):'→ Bench'}
                     </button>
