@@ -489,8 +489,9 @@ const STAGE_COLORS = {Applied:'badge-gray',Screening:'badge-blue',Scheduling:'ba
 function calcWeightedScore(scores, requirements) {
   let total=0, max=0;
   for (const req of requirements) {
+    // Only score active requirements (active===undefined means legacy = active)
+    if (req.active === false) continue;
     const s = scores[req.id];
-    // Disqualify if Must Have and score is 1 (Does Not Meet) or unscored
     if (req.mustHave && s && s.score === 1) return -1;
     if (s && s.score) {
       const w = req.weight || 1;
@@ -959,7 +960,7 @@ function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
       const existing = form.requirements.map(r=>r.name.toLowerCase());
       const newOnes = extracted
         .filter(r => typeof r === 'string' && r.trim() && !existing.includes(r.trim().toLowerCase()))
-        .map(r => ({ id: uid(), name: r.trim(), weight: 1, mustHave: false }));
+        .map(function(r, i) { return { id: uid(), name: r.trim(), weight: 1, mustHave: false, active: (form.requirements.filter(function(x){return x.active!==false;}).length + i) < 8 }; });
       setForm(f=>({...f, jd: jdInput||f.jd, requirements:[...f.requirements,...newOnes]}));
     } catch(e) {
       alert('Could not extract requirements: ' + e.message);
@@ -969,12 +970,12 @@ function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
 
   const addFromLib = (req) => {
     if (form.requirements.find(r=>r.name===req.name)) return;
-    setForm(f=>({...f, requirements:[...f.requirements,{id:uid(),name:req.name,weight:1,mustHave:false}]}));
+    setForm(f=>({...f, requirements:[...f.requirements,{id:uid(),name:req.name,weight:1,mustHave:false,active:f.requirements.filter(function(r){return r.active!==false;}).length<8}]}));
   };
 
   const addCustom = () => {
     if (!customReq.trim()) return;
-    setForm(f=>({...f, requirements:[...f.requirements,{id:uid(),name:customReq.trim(),weight:1,mustHave:false}]}));
+    setForm(f=>({...f, requirements:[...f.requirements,{id:uid(),name:customReq.trim(),weight:1,mustHave:false,active:f.requirements.filter(function(r){return r.active!==false;}).length<8}]}));
     setCustomReq('');
   };
 
@@ -1034,53 +1035,73 @@ function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
           {tab==='requirements' && <>
             <div className="section-title">Position Requirements ({form.requirements.length})</div>
             {form.requirements.length===0 && <div className="text-muted text-sm mb-3">No requirements added yet. Add from library or create custom.</div>}
-            {/* Requirements header legend */}
-            <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:16,marginBottom:8,paddingRight:4}}>
-              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10,color:'var(--muted)'}}>
-                <span>Weight</span>
-                <div style={{position:'relative',display:'inline-block'}} className="tooltip-wrap">
-                  <span style={{cursor:'help',color:'var(--accent)',fontWeight:700,fontSize:11}}>?</span>
-                  <div style={{position:'absolute',right:0,top:16,width:220,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:11,color:'var(--text2)',lineHeight:1.5,zIndex:100,pointerEvents:'none',opacity:0,transition:'opacity .15s'}} className="tooltip-body">
-                    <strong style={{color:'var(--text)'}}>1× Standard</strong> — normal importance<br/>
-                    <strong style={{color:'var(--accent)'}}>2× Important</strong> — counts double<br/>
-                    <strong style={{color:'var(--accent2)'}}>3× Critical</strong> — counts triple; use for your top 1-2 must-win criteria
+            {(()=>{
+              var activeReqs = form.requirements.filter(function(r){return r.active!==false;});
+              var benchReqs = form.requirements.filter(function(r){return r.active===false;});
+              var activeCount = activeReqs.length;
+              var atMax = activeCount >= 8;
+              var sortReqs = function(arr){ return [...arr].sort(function(a,b){ if(a.mustHave&&!b.mustHave) return -1; if(!a.mustHave&&b.mustHave) return 1; if((b.weight||1)!==(a.weight||1)) return (b.weight||1)-(a.weight||1); return a.name.localeCompare(b.name); }); };
+              var ReqRow = function(req) { return (
+                <div key={req.id} className="req-row" style={{opacity:req.active===false?0.5:1}}>
+                  <div style={{flex:1,display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{fontSize:13,fontWeight:500}}>{req.name}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {req.active !== false && <>
+                      <select className="weight-select" value={req.weight}
+                        style={{color:req.weight===3?'var(--accent2)':req.weight===2?'var(--accent)':'',fontWeight:req.weight>1?700:400}}
+                        onChange={e=>updateReq(req.id,'weight',Number(e.target.value))}>
+                        <option value={1}>1× Standard</option>
+                        <option value={2}>2× Important</option>
+                        <option value={3}>3× Critical</option>
+                      </select>
+                      <button className={'must-toggle ' + (req.mustHave?'on':'')}
+                        onClick={()=>updateReq(req.id,'mustHave',!req.mustHave)}
+                        title={req.mustHave?'Must Have: score of 1 = disqualified':'Set as hard gate'}>
+                        {req.mustHave?'🚫':'○'}
+                      </button>
+                    </>}
+                    <button
+                      className="btn btn-xs"
+                      style={{fontWeight:600,minWidth:70,background:req.active===false?(atMax?'var(--surface3)':'rgba(45,212,160,.1)'):'rgba(124,92,252,.1)',color:req.active===false?(atMax?'var(--muted)':'var(--accent3)'):'var(--accent2)',border:'1px solid '+(req.active===false?(atMax?'var(--border)':'rgba(45,212,160,.3)'):'rgba(124,92,252,.3)')}}
+                      disabled={req.active===false&&atMax}
+                      title={req.active===false?(atMax?'Remove one active requirement first to add more':'Add to scored requirements'):'Move to bench (keep but don't score)'}
+                      onClick={()=>updateReq(req.id,'active',req.active===false?true:false)}>
+                      {req.active===false?(atMax?'Bench full':'+ Activate'):'→ Bench'}
+                    </button>
+                    <button className="btn btn-ghost btn-xs" onClick={()=>removeReq(req.id)}>✕</button>
                   </div>
                 </div>
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:5,fontSize:10,color:'var(--muted)'}}>
-                <span>Must Have</span>
-                <div style={{position:'relative',display:'inline-block'}} className="tooltip-wrap">
-                  <span style={{cursor:'help',color:'var(--accent)',fontWeight:700,fontSize:11}}>?</span>
-                  <div style={{position:'absolute',right:0,top:16,width:230,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:11,color:'var(--text2)',lineHeight:1.5,zIndex:100,pointerEvents:'none',opacity:0,transition:'opacity .15s'}} className="tooltip-body">
-                    <strong style={{color:'var(--red)'}}>Hard gate:</strong> if a candidate scores 1 (Does Not Meet) on this, they are automatically <strong>Disqualified</strong> — regardless of how well they score elsewhere.<br/><br/>
-                    Best combined with <strong style={{color:'var(--accent2)'}}>3× weight</strong> for your most critical requirement.
+              );};
+              return (<>
+                {/* Active requirements */}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em'}}>
+                    Scored ({activeCount}/8)
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:12}}>
+                    <div style={{fontSize:10,color:'var(--muted)'}}>Weight <span style={{cursor:'help',color:'var(--accent)',fontWeight:700}} className="tooltip-wrap" title="">?
+                      <div style={{position:'absolute',right:0,top:16,width:200,background:'var(--surface3)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:11,color:'var(--text2)',lineHeight:1.5,zIndex:100,display:'none'}} className="tooltip-body">
+                        1× Standard · 2× Important (double) · 3× Critical (triple)
+                      </div>
+                    </span></div>
+                    <div style={{fontSize:10,color:'var(--muted)'}}>Must Have <span style={{cursor:'help',color:'var(--accent)',fontWeight:700}} title="Score of 1 = auto-disqualified">?</span></div>
                   </div>
                 </div>
-              </div>
-            </div>
-            {[...form.requirements].sort(function(a,b){ if(a.mustHave&&!b.mustHave) return -1; if(!a.mustHave&&b.mustHave) return 1; if((b.weight||1)!==(a.weight||1)) return (b.weight||1)-(a.weight||1); return a.name.localeCompare(b.name); }).map(req=>(
-              <div key={req.id} className="req-row">
-                <div style={{flex:1}}>
-                  <div style={{fontSize:13,fontWeight:500}}>{req.name}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select className="weight-select" value={req.weight}
-                    title={req.weight===3?'3x Critical — counts triple toward score':req.weight===2?'2x Important — counts double':'1x Standard weight'}
-                    style={{color:req.weight===3?'var(--accent2)':req.weight===2?'var(--accent)':'',fontWeight:req.weight>1?700:400}}
-                    onChange={e=>updateReq(req.id,'weight',Number(e.target.value))}>
-                    <option value={1}>1× Standard</option>
-                    <option value={2}>2× Important</option>
-                    <option value={3}>3× Critical</option>
-                  </select>
-                  <button className={'must-toggle ' + (req.mustHave?'on':'')}
-                    onClick={()=>updateReq(req.id,'mustHave',!req.mustHave)}
-                    title={req.mustHave?'Must Have: score of 1 = auto-disqualified (click to remove)':'Click to make this a hard gate — score of 1 disqualifies candidate'}>
-                    {req.mustHave?'🚫':'○'}
-                  </button>
-                  <button className="btn btn-ghost btn-xs" onClick={()=>removeReq(req.id)}>✕</button>
-                </div>
-              </div>
-            ))}
+                {activeCount===0 && <div style={{fontSize:12,color:'var(--muted)',marginBottom:12,fontStyle:'italic'}}>No active requirements — activate from bench or add new ones below.</div>}
+                {atMax && <div style={{fontSize:11,color:'var(--accent3)',marginBottom:8,padding:'6px 10px',background:'rgba(45,212,160,.08)',borderRadius:6}}>✓ 8/8 active — bench extra requirements or remove some to swap.</div>}
+                {sortReqs(activeReqs).map(function(req){ return ReqRow(req); })}
+
+                {/* Bench */}
+                {benchReqs.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginTop:16,marginBottom:8}}>
+                    Bench — not scored ({benchReqs.length})
+                  </div>
+                  <div style={{fontSize:11,color:'var(--muted)',marginBottom:8}}>These are saved but won't affect scoring. Activate up to 8 total.</div>
+                  {sortReqs(benchReqs).map(function(req){ return ReqRow(req); })}
+                </>}
+              </>);
+            })()}
             <hr className="divider"/>
             <div className="section-title">Add Custom Requirement</div>
             <div className="flex gap-2 mb-4">
@@ -2329,7 +2350,7 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
                   <th style={{padding:'12px 16px'}}>Notes</th>
                 </tr></thead>
                 <tbody>
-                  {(posForCand.requirements||[]).map(req=>{
+                  {(posForCand.requirements||[]).filter(function(r){return r.active!==false;}).map(req=>{
                     const s = (cand.scores||{})[req.id]||{};
                     return <tr key={req.id}>
                       <td style={{padding:'12px 16px'}}>
