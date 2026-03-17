@@ -784,7 +784,7 @@ function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) 
 /* ═══════════════════════════════════════
    POSITIONS
    ═══════════════════════════════════════ */
-function PositionsView({ positions, setPositions, requirements: reqLib, candidates }) {
+function PositionsView({ positions, setPositions, requirements: reqLib, setRequirements, candidates }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [openTab, setOpenTab] = useState('details');
@@ -851,6 +851,7 @@ function PositionsView({ positions, setPositions, requirements: reqLib, candidat
       {showModal && <PositionModal
         position={editing}
         reqLib={reqLib}
+        setRequirements={setRequirements}
         initialTab={openTab}
         onSave={p=>{
           if (editing) setPositions(ps=>ps.map(x=>x.id===p.id?p:x));
@@ -929,7 +930,7 @@ function JDTab({ form, update, extractFromJD, extracting, setExtracting }) {
   );
 }
 
-function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
+function PositionModal({ position, reqLib, onSave, onClose, initialTab, setRequirements }) {
   const [form, setForm] = useState(position || { title:'', department:'', location:'', jd:'', requirements:[], status:'Open' });
   const [jdInput, setJdInput] = useState('');
   const [extracting, setExtracting] = useState(false);
@@ -962,6 +963,14 @@ function PositionModal({ position, reqLib, onSave, onClose, initialTab }) {
         .filter(r => typeof r === 'string' && r.trim() && !existing.includes(r.trim().toLowerCase()))
         .map(function(r, i) { return { id: uid(), name: r.trim(), weight: 1, mustHave: false, active: (form.requirements.filter(function(x){return x.active!==false;}).length + i) < 8 }; });
       setForm(f=>({...f, jd: jdInput||f.jd, requirements:[...f.requirements,...newOnes]}));
+      // Save new requirements to the library (avoid duplicates)
+      if (setRequirements) {
+        setRequirements(function(lib) {
+          var libNames = lib.map(function(r){return r.name.toLowerCase();});
+          var toAdd = newOnes.filter(function(r){return !libNames.includes(r.name.toLowerCase());}).map(function(r){return {id:uid(),name:r.name,category:'Extracted'};});
+          return toAdd.length > 0 ? [...lib, ...toAdd] : lib;
+        });
+      }
     } catch(e) {
       alert('Could not extract requirements: ' + e.message);
     }
@@ -3966,7 +3975,7 @@ function App() {
   const renderView = () => {
     switch(view) {
       case 'dashboard': return <Dashboard user={user} org={org} positions={positions} candidates={candidates} setView={setView} setFilterPos={setFilterPos}/>;
-      case 'positions': return <PositionsView positions={positions} setPositions={setPositions} requirements={requirements} candidates={candidates}/>;
+      case 'positions': return <PositionsView positions={positions} setPositions={setPositions} requirements={requirements} setRequirements={setRequirements} candidates={candidates}/>;
       case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions} initialFilter={filterPos} onFilterUsed={()=>setFilterPos('all')} setView={setView}/>;
       case 'scorecards': return <ScorecardsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
