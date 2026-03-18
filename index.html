@@ -1584,7 +1584,7 @@ function CandidateExportModal({ candidates, positions, onClose }) {
   );
 }
 
-function CandidatesView({ candidates, setCandidates, positions, initialFilter, onFilterUsed, setView }) {
+function CandidatesView({ candidates, setCandidates, positions, initialFilter, onFilterUsed, setView, setFilterInterviewCand }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(null);
   const [viewingProfile, setViewingProfile] = useState(null);
@@ -1653,6 +1653,11 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                             💼 LinkedIn
                           </a>
                         )}
+                        <button
+                          onClick={function(e){e.stopPropagation();setFilterInterviewCand(c.id);setView('interviews');}}
+                          style={{display:'inline-flex',alignItems:'center',gap:3,fontSize:11,color:'var(--accent)',fontWeight:600,background:'rgba(79,142,247,.08)',padding:'1px 6px',borderRadius:4,border:'none',cursor:'pointer'}}>
+                          🎙️ Notes{(c.interviewNotes&&c.interviewNotes.length>0)?' ('+c.interviewNotes.length+')':''}
+                        </button>
                       </div>
 
                     </td>
@@ -1673,7 +1678,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
                           value=""
                           onChange={e=>{
                             const action = e.target.value;
-                            if (action==='notes') { setView('interviews'); }
+                            if (action==='notes') { setFilterInterviewCand(c.id); setView('interviews'); }
                             if (action==='scorecard') { setView('scorecards'); }
                             if (action==='references') { setView('references'); }
                             if (action==='share') { setSharingCandidate(c); }
@@ -3063,7 +3068,7 @@ function NoteGroup({ date, groupNotes, removeNote, onCleanGroup, onEditNote }) {
 }
 
 function renderNoteGroups(interviewNotes, removeNote, onCleanGroup, onEditNote) {
-  const notes = [...interviewNotes].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const notes = [...interviewNotes].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   const groups = {};
   notes.forEach(n => {
     const d = n.savedAt
@@ -3082,8 +3087,9 @@ function renderNoteGroups(interviewNotes, removeNote, onCleanGroup, onEditNote) 
 /* ═══════════════════════════════════════
    INTERVIEW NOTES
    ═══════════════════════════════════════ */
-function InterviewsView({ candidates, setCandidates, positions }) {
-  const [selCand, setSelCand] = useState('');
+function InterviewsView({ candidates, setCandidates, positions, initialCand, onCandUsed }) {
+  const [selCand, setSelCand] = useState(initialCand||'');
+  React.useEffect(function(){if(initialCand){setSelCand(initialCand);onCandUsed&&onCandUsed();}}, [initialCand]);
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [noteInput, setNoteInput] = useState('');
@@ -3896,6 +3902,7 @@ function App() {
   const [org, setOrg] = useState(null);
   const [view, setView] = useState('dashboard');
   const [filterPos, setFilterPos] = useState('all');
+  const [filterInterviewCand, setFilterInterviewCand] = useState('');
   const [showProfile, setShowProfile] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
   const [debugLog, setDebugLog] = useState([]);
@@ -4115,9 +4122,9 @@ function App() {
     switch(view) {
       case 'dashboard': return <Dashboard user={user} org={org} positions={positions} candidates={candidates} setView={setView} setFilterPos={setFilterPos}/>;
       case 'positions': return <PositionsView positions={positions} setPositions={setPositions} requirements={requirements} setRequirements={setRequirements} candidates={candidates}/>;
-      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions} initialFilter={filterPos} onFilterUsed={()=>setFilterPos('all')} setView={setView}/>;
+      case 'candidates': return <CandidatesView candidates={candidates} setCandidates={setCandidates} positions={positions} initialFilter={filterPos} onFilterUsed={()=>setFilterPos('all')} setView={setView} setFilterInterviewCand={setFilterInterviewCand}/>;
       case 'scorecards': return <ScorecardsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
-      case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
+      case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions} initialCand={filterInterviewCand} onCandUsed={()=>setFilterInterviewCand('')}/>;
       case 'references': return <ReferenceChecksView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'comparison': return <ComparisonView candidates={candidates} positions={positions}/>;
       case 'team': return <TeamScoringView positions={positions} candidates={candidates} setCandidates={setCandidates}/>;
