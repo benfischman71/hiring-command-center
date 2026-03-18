@@ -1307,7 +1307,7 @@ function ShareWithTeamModal({ candidate, positions, onClose }) {
   );
 }
 
-function CandidateProfileModal({ candidate, positions, onEdit, onClose, setCandidates }) {
+function CandidateProfileModal({ candidate, positions, onEdit, onClose, setCandidates, onGoToNotes }) {
   const pos = positions.find(p=>p.id===candidate.positionId);
   const score = pos && candidate.scores ? calcWeightedScore(candidate.scores, pos.requirements||[]) : null;
   const liUrl = candidate.linkedIn ? (candidate.linkedIn.startsWith('http') ? candidate.linkedIn : 'https://' + candidate.linkedIn) : null;
@@ -1423,12 +1423,22 @@ function CandidateProfileModal({ candidate, positions, onEdit, onClose, setCandi
           )}
 
           {/* Notes */}
-          {candidate.notes && (
-            <div className="card" style={{marginBottom:12}}>
-              <div className="section-title">Notes</div>
-              <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{candidate.notes}</div>
+          <div className="card" style={{marginBottom:12}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:candidate.notes?8:0}}>
+              <div className="section-title" style={{margin:0}}>General Notes</div>
+              {onGoToNotes && (
+                <button className="btn btn-ghost btn-xs" style={{color:'var(--accent)',fontWeight:600,fontSize:11}}
+                  onClick={function(){onGoToNotes();}}
+                  title="Go to Interview Notes">
+                  🎙️ {(candidate.interviewNotes&&candidate.interviewNotes.length>0)?candidate.interviewNotes.length+' Interview Notes →':'View Interview Notes →'}
+                </button>
+              )}
             </div>
-          )}
+            {candidate.notes
+              ? <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{candidate.notes}</div>
+              : <div style={{fontSize:12,color:'var(--muted)',fontStyle:'italic'}}>No general notes added.</div>
+            }
+          </div>
 
           {/* Next Steps */}
           {candidate.nextSteps && (
@@ -1738,6 +1748,7 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
           setCandidates={setCandidates}
           onEdit={()=>openEdit(viewingProfile)}
           onClose={()=>setViewingProfile(null)}
+          onGoToNotes={function(){setFilterInterviewCand(viewingProfile.id);setViewingProfile(null);setView('interviews');}}
         />
       )}
       {sharingCandidate && (
