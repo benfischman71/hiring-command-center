@@ -1759,12 +1759,38 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
 /* ═══════════════════════════════════════
    PARSED PROFILE CARD
    ═══════════════════════════════════════ */
-function ParsedProfileCard({ profile, onClear, onDismiss }) {
+function ParsedProfileCard({ profile, onClear, onDismiss, onUpdate }) {
   const [collapsed, setCollapsed] = React.useState(true);
+  const [cleaning, setCleaning] = React.useState(false);
   if (!profile) return null;
   var clearFn = onClear || onDismiss;
 
   const initials = profile.name ? profile.name.split(' ').map(function(n){return n[0];}).join('').slice(0,2).toUpperCase() : '?';
+
+  var cleanProfile = async function() {
+    setCleaning(true);
+    try {
+      var resp = await fetch('https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+        body: JSON.stringify({
+          prompt: 'Clean and normalize this candidate profile JSON. Fix date formats to be consistent (e.g. "Jan 2020 - Mar 2022"), clean up any garbled text or OCR artifacts, improve the summary to be 2-3 polished professional sentences, ensure bullet points are clean and parallel. Return ONLY the corrected JSON object with the same fields, no markdown, no explanation. Profile: ' + JSON.stringify(profile),
+          max_tokens: 2000
+        })
+      });
+      var data = await resp.json();
+      if (data.text && onUpdate) {
+        var text = data.text.replace(/```json|```/g,'').trim();
+        var start = text.indexOf('{');
+        var end = text.lastIndexOf('}');
+        if (start !== -1 && end !== -1) {
+          var cleaned = JSON.parse(text.slice(start, end+1));
+          onUpdate(cleaned);
+        }
+      }
+    } catch(e) { alert('Could not clean profile: ' + e.message); }
+    setCleaning(false);
+  };
 
   return (
     <div style={{border:'1px solid var(--accent)',borderRadius:12,marginBottom:16,overflow:'hidden',background:'var(--surface2)'}}>
@@ -1783,6 +1809,15 @@ function ParsedProfileCard({ profile, onClear, onDismiss }) {
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center'}}>
           <div style={{fontSize:10,color:'var(--accent3)',fontWeight:600,background:'rgba(45,212,160,.1)',padding:'3px 8px',borderRadius:20}}>✨ AI Generated</div>
+          {onUpdate && (
+            <button className="btn btn-purple btn-xs" onClick={cleanProfile} disabled={cleaning}
+              title="Fix date formats, clean up text, polish summary"
+              style={{display:'flex',alignItems:'center',gap:4}}>
+              {cleaning
+                ? <><span style={{display:'inline-block',width:8,height:8,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/> Cleaning...</>
+                : '🧹 Clean Profile'}
+            </button>
+          )}
           <button className="btn btn-ghost btn-xs" onClick={function(){setCollapsed(function(c){return !c;})}} style={{color:'var(--muted)'}}>
             {collapsed ? '▼ Expand' : '▲ Collapse'}
           </button>
@@ -2236,6 +2271,7 @@ function CandidateModal({ candidate, positions, onSave, onClose }) {
             <ParsedProfileCard
               profile={parsedProfile}
               onClear={function(){if(window.confirm('Clear the full profile for this candidate? This cannot be undone.'))setParsedProfile(null);}}
+              onUpdate={function(cleaned){setParsedProfile(function(p){return {...p,...cleaned};});}}
             />
           )}
 
