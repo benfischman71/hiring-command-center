@@ -2887,30 +2887,78 @@ function TranscriptImport({ selCand, setCandidates }) {
 function NoteItem({ n, removeNote, onEdit }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(n.text);
-
+  const [showCleaned, setShowCleaned] = useState(false);
   const save = () => { onEdit(n.id, draft); setEditing(false); };
   const cancel = () => { setDraft(n.text); setEditing(false); };
+
+  const parseSections = function(text) {
+    var sections = { summary: '', themes: [], cleaned: '' };
+    var current = null;
+    text.split(String.fromCharCode(10)).forEach(function(line) {
+      if (line.trim() === 'SUMMARY') { current = 'summary'; return; }
+      if (line.trim() === 'KEY THEMES') { current = 'themes'; return; }
+      if (line.trim() === 'CLEANED NOTES') { current = 'cleaned'; return; }
+      if (current === 'summary' && line.trim()) sections.summary += (sections.summary ? ' ' : '') + line.trim();
+      if (current === 'themes' && line.startsWith('- ')) sections.themes.push(line.slice(2));
+      if (current === 'cleaned' && line.trim()) sections.cleaned += (sections.cleaned ? String.fromCharCode(10) : '') + line;
+    });
+    return sections;
+  };
 
   return (
     <div style={{position:'relative',paddingRight:60}}>
       {editing
         ? <div>
-            <textarea
-              autoFocus
-              value={draft}
-              onChange={e=>setDraft(e.target.value)}
+            <textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)}
               onKeyDown={e=>{if(e.key==='Escape')cancel();}}
-              style={{width:'100%',fontSize:13,lineHeight:1.8,minHeight:80,marginBottom:6}}
-            />
+              style={{width:'100%',fontSize:13,lineHeight:1.8,minHeight:80,marginBottom:6}}/>
             <div style={{display:'flex',gap:6}}>
               <button className="btn btn-primary btn-xs" onClick={save}>Save</button>
               <button className="btn btn-ghost btn-xs" onClick={cancel}>Cancel</button>
             </div>
           </div>
-        : <div style={{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap',color:'var(--text)'}}>
-            {n.star && <span style={{color:'var(--yellow)'}}>⭐ </span>}
-            {n.text}
-          </div>
+        : n.synthesis
+          ? (function(){
+              var s = parseSections(n.text);
+              return (
+                <div>
+                  {s.summary && <div style={{fontSize:13,lineHeight:1.7,color:'var(--text)',marginBottom:10}}>{s.summary}</div>}
+                  {s.themes.length > 0 && (
+                    <div style={{marginBottom:10}}>
+                      <div style={{fontSize:10,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:5}}>Key Themes</div>
+                      {s.themes.map(function(t,i){return(
+                        <div key={i} style={{display:'flex',gap:8,fontSize:13,lineHeight:1.65,marginBottom:3}}>
+                          <span style={{color:'var(--accent2)',fontWeight:700,flexShrink:0}}>•</span>
+                          <span style={{color:'var(--text)'}}>{t}</span>
+                        </div>
+                      );})}
+                    </div>
+                  )}
+                  {s.cleaned && !n.isShort && (
+                    <div>
+                      <button className="btn btn-ghost btn-xs" style={{fontSize:11,color:'var(--muted)',border:'1px solid var(--border)',marginBottom:6}}
+                        onClick={function(){setShowCleaned(function(v){return !v;});}}>
+                        {showCleaned ? '▲ Hide notes' : '▼ Show cleaned notes'}
+                      </button>
+                      {showCleaned && (
+                        <div style={{fontSize:13,lineHeight:1.75,color:'var(--text2)',whiteSpace:'pre-wrap',padding:'10px 12px',background:'var(--surface3)',borderRadius:8,borderLeft:'2px solid var(--border2)'}}>
+                          {s.cleaned}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {s.cleaned && n.isShort && (
+                    <div style={{fontSize:13,lineHeight:1.75,color:'var(--text2)',whiteSpace:'pre-wrap',padding:'10px 12px',background:'var(--surface3)',borderRadius:8,borderLeft:'2px solid var(--border2)',marginTop:4}}>
+                      {s.cleaned}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          : <div>
+              {n.star && <span style={{color:'var(--yellow)'}}>⭐ </span>}
+              <span style={{fontSize:13,lineHeight:1.8,whiteSpace:'pre-wrap',color:'var(--text)'}}>{n.text}</span>
+            </div>
       }
       {!editing && (
         <div style={{position:'absolute',top:0,right:0,display:'flex',gap:2}}>
@@ -3101,22 +3149,34 @@ function InterviewsView({ candidates, setCandidates, positions }) {
           {renderNoteGroups(cand.interviewNotes||[], removeNote, async (groupNotes, groupDate) => {
             const PROXY = 'https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy';
             const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuY2ZteHF3cGZ4aHp0YXh1aGR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0MjAxOTcsImV4cCI6MjA4ODk5NjE5N30.M-DB7beiKqW3bgKp25YYQZD3uJV9_fGvfEoQb8Qn4jw';
-            const rawText = groupNotes.map(n=>n.text).join(' | ');
+            const rawText = groupNotes.map(function(n){return n.text;}).join(' | ');
+            const NL = String.fromCharCode(10);
+            const isShort = rawText.length < 300;
             try {
               const resp = await fetch(PROXY, {
                 method:'POST',
                 headers:{'Content-Type':'application/json','Authorization':'Bearer '+ANON},
-                body:JSON.stringify({prompt:'Clean up and organize these interview notes into clear readable prose. Fix typos, group related points: ' + rawText, max_tokens:800})
+                body:JSON.stringify({
+                  prompt: 'Analyze these interview notes for a hiring team. Return exactly three sections:' + NL + NL +
+                    'SUMMARY' + NL +
+                    '2-3 sentences capturing the most important overall impression of this candidate.' + NL + NL +
+                    'KEY THEMES' + NL +
+                    '3-5 bullet points (each starting with -) on significant patterns, strengths, and concerns.' + NL + NL +
+                    'CLEANED NOTES' + NL +
+                    'The notes rewritten as clean readable prose. Fix typos, remove filler, improve flow. Keep all facts.' + NL + NL +
+                    'Notes: ' + rawText,
+                  max_tokens: 1200
+                })
               });
               const data = await resp.json();
               if (data.text) {
                 const now2 = new Date();
-                const savedAt2 = 'Cleaned ' + now2.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
-                const cleanedNote = {id:uid(),text:data.text,time:'',star:true,createdAt:now2.toISOString(),savedAt:savedAt2};
-                const oldIds = groupNotes.map(n=>n.id);
-                setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]).filter(n=>!oldIds.includes(n.id)),cleanedNote]}:c));
+                const savedAt2 = 'Synthesized ' + now2.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+                const cleanedNote = {id:uid(),text:data.text,synthesis:true,isShort:isShort,time:'',star:true,createdAt:now2.toISOString(),savedAt:savedAt2};
+                const oldIds = groupNotes.map(function(n){return n.id;});
+                setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,interviewNotes:[...(c.interviewNotes||[]).filter(function(n){return !oldIds.includes(n.id);}),cleanedNote]}:c));
               }
-            } catch(e) { alert('Could not clean notes: ' + e.message); }
+            } catch(e) { alert('Could not synthesize notes: ' + e.message); }
           }, editNote)}
         </div>
       </>}
