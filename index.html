@@ -24,6 +24,7 @@
 html,body,#root{height:100%}
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
 ::-webkit-scrollbar{width:5px;height:5px}
+@keyframes spin{to{transform:rotate(360deg)}}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
 
@@ -2894,14 +2895,24 @@ function NoteItem({ n, removeNote, onEdit }) {
   const parseSections = function(text) {
     var sections = { summary: '', themes: [], cleaned: '' };
     var current = null;
-    text.split(String.fromCharCode(10)).forEach(function(line) {
-      if (line.trim() === 'SUMMARY') { current = 'summary'; return; }
-      if (line.trim() === 'KEY THEMES') { current = 'themes'; return; }
-      if (line.trim() === 'CLEANED NOTES') { current = 'cleaned'; return; }
-      if (current === 'summary' && line.trim()) sections.summary += (sections.summary ? ' ' : '') + line.trim();
-      if (current === 'themes' && line.startsWith('- ')) sections.themes.push(line.slice(2));
-      if (current === 'cleaned' && line.trim()) sections.cleaned += (sections.cleaned ? String.fromCharCode(10) : '') + line;
+    var NL = String.fromCharCode(10);
+    text.split(NL).forEach(function(line) {
+      var trimmed = line.trim();
+      // Match headers flexibly (with or without ** markdown bold)
+      var isHeader = function(h) { return trimmed === h || trimmed === '**' + h + '**' || trimmed.replace(/[*#]/g,'').trim() === h; };
+      if (isHeader('SUMMARY')) { current = 'summary'; return; }
+      if (isHeader('KEY THEMES') || isHeader('KEY THEMES:')) { current = 'themes'; return; }
+      if (isHeader('CLEANED NOTES') || isHeader('CLEANED NOTES:') || isHeader('FORMATTED NOTES') || isHeader('NOTES')) { current = 'cleaned'; return; }
+      if (!trimmed) return;
+      if (current === 'summary') sections.summary += (sections.summary ? ' ' : '') + trimmed;
+      if (current === 'themes' && (trimmed.startsWith('- ') || trimmed.startsWith('• '))) sections.themes.push(trimmed.slice(2));
+      else if (current === 'themes' && trimmed.match(/^[0-9]+\./)) sections.themes.push(trimmed.replace(/^[0-9]+\.\s*/,''));
+      if (current === 'cleaned') sections.cleaned += (sections.cleaned ? NL : '') + line;
     });
+    // Fallback: if no sections parsed, treat entire text as summary
+    if (!sections.summary && !sections.themes.length && !sections.cleaned) {
+      sections.summary = text.trim();
+    }
     return sections;
   };
 
@@ -2974,45 +2985,60 @@ function NoteItem({ n, removeNote, onEdit }) {
   );
 }
 
+function NoteGroup({ date, groupNotes, removeNote, onCleanGroup, onEditNote }) {
+  const [cleaning, setCleaning] = useState(false);
+
+  const handleClean = async function() {
+    setCleaning(true);
+    await onCleanGroup(groupNotes, date);
+    setCleaning(false);
+  };
+
+  return (
+    <div style={{marginBottom:20,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid var(--border)',background:'var(--surface3)'}}>
+        <span style={{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em'}}>{date}</span>
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          <span style={{fontSize:11,color:'var(--muted)'}}>{groupNotes.length + ' note' + (groupNotes.length!==1?'s':'')}</span>
+          {onCleanGroup && (
+            <button
+              className="btn btn-purple btn-xs"
+              onClick={handleClean}
+              disabled={cleaning}
+              style={{fontSize:10,padding:'3px 8px',minWidth:70,display:'flex',alignItems:'center',gap:4,justifyContent:'center'}}>
+              {cleaning
+                ? <><span style={{display:'inline-block',width:10,height:10,border:'2px solid rgba(255,255,255,.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/> Thinking...</>
+                : '✨ Clean'}
+            </button>
+          )}
+        </div>
+      </div>
+      <div style={{padding:'14px 16px'}}>
+        {groupNotes.map(function(n,i){
+          return (
+            <div key={n.id} style={{marginBottom:i<groupNotes.length-1?12:0,paddingBottom:i<groupNotes.length-1?12:0,borderBottom:i<groupNotes.length-1?'1px solid var(--border)':'none'}}>
+              <NoteItem n={n} removeNote={removeNote} onEdit={onEditNote||function(){}}/>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function renderNoteGroups(interviewNotes, removeNote, onCleanGroup, onEditNote) {
   const notes = [...interviewNotes].sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
   const groups = {};
   notes.forEach(n => {
     const d = n.savedAt
-      ? n.savedAt.includes('Cleaned') ? n.savedAt : n.savedAt.split(',').slice(0,2).join(',')
+      ? n.savedAt.includes('Cleaned') || n.savedAt.includes('Synthesized') ? n.savedAt : n.savedAt.split(',').slice(0,2).join(',')
       : n.createdAt ? new Date(n.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Notes';
     if (!groups[d]) groups[d] = [];
     groups[d].push(n);
   });
 
   return Object.entries(groups).map(([date, groupNotes]) => (
-    React.createElement('div', {key:date, style:{marginBottom:20,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:12,overflow:'hidden'}},
-      React.createElement('div', {style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid var(--border)',background:'var(--surface3)'}},
-        React.createElement('span', {style:{fontSize:11,fontWeight:700,color:'var(--accent)',textTransform:'uppercase',letterSpacing:'.07em'}}, date),
-        React.createElement('div', {style:{display:'flex',gap:6,alignItems:'center'}},
-          React.createElement('span', {style:{fontSize:11,color:'var(--muted)'}}, groupNotes.length + ' note' + (groupNotes.length!==1?'s':'')),
-          onCleanGroup && React.createElement('button', {
-            className:'btn btn-purple btn-xs',
-            onClick:()=>onCleanGroup(groupNotes, date),
-            style:{fontSize:10,padding:'3px 8px'}
-          }, '✨ Clean')
-        )
-      ),
-      React.createElement('div', {style:{padding:'14px 16px'}},
-        groupNotes.map((n,i) =>
-          React.createElement('div', {
-            key:n.id,
-            style:{
-              marginBottom: i < groupNotes.length-1 ? 12 : 0,
-              paddingBottom: i < groupNotes.length-1 ? 12 : 0,
-              borderBottom: i < groupNotes.length-1 ? '1px solid var(--border)' : 'none'
-            }
-          },
-            React.createElement(NoteItem, {n, removeNote, onEdit: onEditNote||function(){}})
-          )
-        )
-      )
-    )
+    React.createElement(NoteGroup, {key:date, date, groupNotes, removeNote, onCleanGroup, onEditNote})
   ));
 }
 
