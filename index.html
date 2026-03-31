@@ -2060,26 +2060,49 @@ function InterviewTeamEditor({ interviewers, onChange }) {
 function LettersSection({ letters, onChange }) {
   const [dragging, setDragging] = React.useState(false);
   const [editingId, setEditingId] = React.useState(null);
+  const [processing, setProcessing] = React.useState(false);
 
-  var readFile = function(file) {
+  var extractPdfWithClaude = async function(file) {
+    return new Promise(function(resolve, rej) {
+      var reader = new FileReader();
+      reader.onload = async function(e) {
+        var base64 = e.target.result.split(',')[1];
+        try {
+          var resp = await fetch('https://sncfmxqwpfxhztaxuhdu.supabase.co/functions/v1/claude-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: [
+                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+                { type: 'text', text: 'Extract all the text from this document. Return only the text content, preserving paragraphs. No commentary.' }
+              ]}],
+              max_tokens: 2000
+            })
+          });
+          var data = await resp.json();
+          var text = data.text || (Array.isArray(data.content) ? data.content.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('') : '');
+          resolve(text || '[Could not extract text — try pasting the content manually]');
+        } catch(e) { resolve('[Could not extract PDF text — try pasting manually]'); }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  var readFile = async function(file) {
+    if (file.type === 'application/pdf') {
+      return await extractPdfWithClaude(file);
+    }
     return new Promise(function(resolve) {
       var reader = new FileReader();
       reader.onload = function(e) { resolve(e.target.result); };
-      if (file.type === 'application/pdf') {
-        reader.readAsDataURL(file);
-        reader.onload = function(e) {
-          resolve('[PDF uploaded - paste text content below to make it readable]');
-        };
-      } else {
-        reader.readAsText(file);
-      }
+      reader.readAsText(file);
     });
   };
 
   var addLetter = function(content, filename) {
     var letter = {
       id: uid(),
-      author: filename ? filename.replace(/\.[^.]+$/, '') : 'Unknown',
+      author: filename ? filename.replace(/\.[^.]+$/, '').replace(/_/g,' ') : 'Candidate',
       content: content,
       uploadedAt: new Date().toISOString()
     };
@@ -2091,19 +2114,23 @@ function LettersSection({ letters, onChange }) {
     setDragging(false);
     var files = Array.from(e.dataTransfer.files);
     var text = e.dataTransfer.getData('text');
-    if (text && text.length > 20) { addLetter(text, 'Pasted letter'); return; }
+    if (text && text.length > 20) { addLetter(text, 'Pasted note'); return; }
+    setProcessing(true);
     for (var f of files) {
       var content = await readFile(f);
       addLetter(content, f.name);
     }
+    setProcessing(false);
   };
 
   var handleFileInput = async function(e) {
     var files = Array.from(e.target.files);
+    setProcessing(true);
     for (var f of files) {
       var content = await readFile(f);
       addLetter(content, f.name);
     }
+    setProcessing(false);
     e.target.value = '';
   };
 
@@ -2134,9 +2161,10 @@ function LettersSection({ letters, onChange }) {
           background:dragging?'rgba(79,142,247,.05)':'var(--surface2)',
           transition:'all .15s', marginBottom:10
         }}>
-        <div style={{fontSize:20,marginBottom:4}}>📄</div>
-        <div style={{fontSize:12,fontWeight:600,color:'var(--text2)'}}>Drop file here or click to upload</div>
-        <div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>.txt, .pdf or paste text directly</div>
+        {processing
+          ? <><div style={{fontSize:20,marginBottom:4}}>⏳</div><div style={{fontSize:12,fontWeight:600,color:'var(--accent)'}}>Extracting text with Claude...</div></>
+          : <><div style={{fontSize:20,marginBottom:4}}>📄</div><div style={{fontSize:12,fontWeight:600,color:'var(--text2)'}}>Drop file here or click to upload</div><div style={{fontSize:11,color:'var(--muted)',marginTop:2}}>.txt, .pdf · Claude will extract PDF text automatically</div></>
+        }
       </div>
       <input id="candidate-note-file-input" type="file" accept=".txt,.pdf,.doc,.docx" multiple style={{display:'none'}} onChange={handleFileInput}/>
 
