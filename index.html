@@ -4043,11 +4043,46 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
             </div>
           )}
 
-          {(cand.interviewers||[]).length === 0 && (
-            <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>
-              Tip: Add interviewers to this candidate in Edit Candidate to get per-person links.
+          {/* Add interviewer inline */}
+          <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid var(--border)'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Add Interviewer</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <input
+                id="ts-iv-name"
+                placeholder="Full name"
+                style={{flex:2,minWidth:130,fontSize:12,padding:'6px 10px'}}
+                onKeyDown={function(e){
+                  if(e.key==='Enter'){
+                    var nameEl=document.getElementById('ts-iv-name');
+                    var roleEl=document.getElementById('ts-iv-role');
+                    var n=nameEl.value.trim();
+                    if(!n)return;
+                    setCandidates(function(cs){return cs.map(function(c){
+                      if(c.id!==selCand)return c;
+                      return {...c,interviewers:[...(c.interviewers||[]),{id:uid(),name:n,role:roleEl.value.trim()}]};
+                    });});
+                    nameEl.value='';roleEl.value='';
+                  }
+                }}
+              />
+              <input
+                id="ts-iv-role"
+                placeholder="Role / focus area (optional)"
+                style={{flex:3,minWidth:160,fontSize:12,padding:'6px 10px'}}
+              />
+              <button className="btn btn-primary btn-sm" onClick={function(){
+                var nameEl=document.getElementById('ts-iv-name');
+                var roleEl=document.getElementById('ts-iv-role');
+                var n=nameEl.value.trim();
+                if(!n)return;
+                setCandidates(function(cs){return cs.map(function(c){
+                  if(c.id!==selCand)return c;
+                  return {...c,interviewers:[...(c.interviewers||[]),{id:uid(),name:n,role:roleEl.value.trim()}]};
+                });});
+                nameEl.value='';roleEl.value='';
+              }}>+ Add</button>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="card">
