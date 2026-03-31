@@ -4384,9 +4384,9 @@ function InviteView({ user, org }) {
   var openEmail = function(invite) {
     var NL = '%0D%0A';
     var link = getInviteLink(invite.token, invite.email);
-    var subject = encodeURIComponent('You have been invited to the Trade Hiring Command Center');
+    var subject = encodeURIComponent('You have been invited to my Hiring Command Center');
     var body = encodeURIComponent('Hi ' + (invite.name||'there') + ',') + NL + NL +
-      encodeURIComponent("I'd like to give you access to Trade's Hiring Command Center (HCC) — our internal tool for managing candidates, scorecards, and the full hiring pipeline.") + NL + NL +
+      encodeURIComponent("I'd like to give you access to my Hiring Command Center (HCC) — our internal tool for managing candidates, scorecards, and the full hiring pipeline.") + NL + NL +
       encodeURIComponent('Click the link below to create your account. It takes about 30 seconds — just set a password and you are in.') + NL + NL +
       encodeURIComponent(link) + NL + NL +
       encodeURIComponent('A few things to know:') + NL +
