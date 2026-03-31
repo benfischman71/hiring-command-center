@@ -4051,11 +4051,13 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
   const [selPos, setSelPos] = useState('');
   const [selCand, setSelCand] = useState('');
   const [copied, setCopied] = useState(false);
+  const [teamScores, setTeamScores] = useState([]);
+  const [loadingScores, setLoadingScores] = useState(false);
 
   const pos = positions.find(p=>p.id===selPos);
   const cand = candidates.find(c=>c.id===selCand);
 
-  const shareLink = selCand ? `${window.location.href.split('?')[0]}?scorecard=${selCand}` : '';
+  const shareLink = selCand ? (window.location.href.split('?')[0] + '?scorecard=' + selCand) : '';
 
   const copy = () => {
     navigator.clipboard.writeText(shareLink);
@@ -4063,7 +4065,40 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
     setTimeout(()=>setCopied(false),2000);
   };
 
-  const teamScores = cand?.teamScores || [];
+  // Load team scores from Supabase team_scores table when candidate changes
+  React.useEffect(function(){
+    if (!selCand) { setTeamScores([]); return; }
+    setLoadingScores(true);
+    if (!DEMO_MODE && supabase) {
+      supabase.from('team_scores').select('*').eq('candidate_id', selCand).order('submitted_at', {ascending:true})
+        .then(function(result){
+          if (result.data && result.data.length > 0) {
+            // Normalize field names from snake_case
+            setTeamScores(result.data.map(function(r){
+              return {
+                evaluatorName: r.evaluator_name,
+                evaluatorEmail: r.evaluator_email,
+                scores: r.scores || {},
+                valueScores: r.value_scores || {},
+                recommendation: r.recommendation,
+                notes: r.notes,
+                submittedAt: r.submitted_at
+              };
+            }));
+          } else {
+            // Fallback to legacy teamScores on candidate object
+            setTeamScores(candidates.find(function(c){return c.id===selCand;})?.teamScores || []);
+          }
+          setLoadingScores(false);
+        }).catch(function(){
+          setTeamScores(candidates.find(function(c){return c.id===selCand;})?.teamScores || []);
+          setLoadingScores(false);
+        });
+    } else {
+      setTeamScores(candidates.find(function(c){return c.id===selCand;})?.teamScores || []);
+      setLoadingScores(false);
+    }
+  }, [selCand]);
 
   return (
     <div className="page">
@@ -4180,9 +4215,20 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
 
         <div className="card">
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-            <div className="section-title" style={{margin:0}}>Team Scorecards</div>
-            
+            <div className="section-title" style={{margin:0}}>Team Scorecards ({teamScores.length})</div>
+            <button className="btn btn-ghost btn-xs" style={{color:'var(--muted)'}}
+              onClick={function(){
+                setTeamScores([]);
+                setLoadingScores(true);
+                if (!DEMO_MODE && supabase) {
+                  supabase.from('team_scores').select('*').eq('candidate_id', selCand).order('submitted_at',{ascending:true}).then(function(r){
+                    if(r.data) setTeamScores(r.data.map(function(row){return{evaluatorName:row.evaluator_name,evaluatorEmail:row.evaluator_email,scores:row.scores||{},valueScores:row.value_scores||{},recommendation:row.recommendation,notes:row.notes,submittedAt:row.submitted_at};}));
+                    setLoadingScores(false);
+                  });
+                }
+              }}>↺ Refresh</button>
           </div>
+          {loadingScores && <div style={{fontSize:12,color:'var(--muted)',fontStyle:'italic',marginBottom:8}}>Loading scores...</div>}
           {(function(){
                 var activeReqs = (pos?.requirements||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
                 var scoreColor = function(s){ return s>=4?'#2dd4a0':s===3?'#f7c94f':s<=2?'#f75c5c':'var(--muted)'; };
@@ -4349,26 +4395,30 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
 
   const submit = async () => {
     const submission = { evaluatorName:evaluator.name, evaluatorEmail:evaluator.email, scores, valueScores, recommendation, notes, submittedAt:today() };
-    // Update local state
-    const updatedCandidates = candidates.map(c=>c.id===candidateId?{...c,teamScores:[...(c.teamScores||[]),submission]}:c);
-    setCandidates(updatedCandidates);
-    // Also write directly to Supabase since there is no logged-in user to trigger the normal sync
+    setSubmitted(true);
     if (!DEMO_MODE && supabase) {
       try {
-        // Find the org_id by querying app_data for this candidate
-        const result = await supabase.from('app_data').select('org_id').eq('data_type','candidates').then(function(r){
-          if (!r.data) return null;
-          return r.data.find(function(row){ return Array.isArray(row.data) && row.data.find(function(c){return c.id===candidateId;}); });
-        });
-        if (result && result.org_id) {
-          await supabase.from('app_data').upsert(
-            { org_id: result.org_id, data_type: 'candidates', data: updatedCandidates, updated_at: new Date().toISOString() },
-            { onConflict: 'org_id,data_type' }
-          );
+        // Write to dedicated team_scores table - works without auth
+        var orgId = null;
+        var appDataResult = await supabase.from('app_data').select('org_id').eq('data_type','candidates');
+        if (appDataResult.data) {
+          var row = appDataResult.data.find(function(r){ return Array.isArray(r.data) && r.data.find(function(c){return c.id===candidateId;}); });
+          if (row) orgId = row.org_id;
         }
-      } catch(e) { console.warn('Could not persist team score:', e); }
+        await supabase.from('team_scores').insert({
+          id: uid(),
+          candidate_id: candidateId,
+          org_id: orgId,
+          evaluator_name: evaluator.name,
+          evaluator_email: evaluator.email,
+          scores: scores,
+          value_scores: valueScores,
+          recommendation: recommendation,
+          notes: notes,
+          submitted_at: new Date().toISOString()
+        });
+      } catch(e) { console.warn('Could not save team score:', e); }
     }
-    setSubmitted(true);
   };
 
   if (submitted) return (
