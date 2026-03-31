@@ -852,7 +852,7 @@ function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) 
                 onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
                 <div>
                   <div style={{fontWeight:600,fontSize:13,color:'var(--accent)'}}>{c.name}</div>
-                  <div className="text-muted text-xs mt-1">{pos?.title||'—'}</div>
+                  <div className="text-muted text-xs mt-1">{(pos&&pos.title)||'—'}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`badge ${STAGE_COLORS[c.stage]||'badge-gray'}`}>{c.stage}</span>
@@ -4050,7 +4050,7 @@ function ComparisonView({ candidates, positions }) {
 
 function CombinedScorecardModal({ cand, pos, teamScores, user, onClose }) {
   var VALUES = [{id:'connection',label:'Connection'},{id:'customer',label:'Customer'},{id:'impact',label:'Impact'},{id:'challenge',label:'Challenge'},{id:'constraints',label:'Constraints'}];
-  var activeReqs = (pos?.requirements||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
+  var activeReqs = ((pos&&pos.requirements)||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
   var scoreColor = function(s){ return s>=4?'#2dd4a0':s===3?'#f7c94f':s<=2?'#f75c5c':'var(--surface3)'; };
 
   // Build all rows: unscored interviewers first, then scored, then owner
@@ -4660,7 +4660,7 @@ function TeamScoringView({ positions, candidates, setCandidates, user }) {
 
       {!selCand && <div className="empty-state"><div className="empty-icon">🔗</div><div className="empty-title">Select a candidate to generate share link</div></div>}
 
-      {showCombined && cand && pos && (
+      {showCombined && cand && (
         <CombinedScorecardModal
           cand={cand}
           pos={pos}
