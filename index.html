@@ -620,7 +620,19 @@ async function readJDFile(file, callback) {
    ═══════════════════════════════════════ */
 function AuthScreen({ onAuth }) {
   const [tab, setTab] = useState('signup');
-  const [form, setForm] = useState({ email:'', password:'', name:'', org:'' });
+  const inviteParam = new URLSearchParams(window.location.search).get('invite');
+  const [form, setForm] = useState({ email:'', password:'', name:'', org:'', inviteToken: inviteParam||'' });
+  React.useEffect(function(){
+    if (inviteParam) {
+      setTab('signup');
+      // Try to pre-fill email from invite
+      if (!DEMO_MODE && supabase) {
+        supabase.from('invitations').select('email,name').eq('token', inviteParam).single().then(function(r){
+          if (r.data) setForm(function(f){return {...f, email: r.data.email||'', name: r.data.name||'', inviteToken: inviteParam};});
+        });
+      }
+    }
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -658,15 +670,35 @@ function AuthScreen({ onAuth }) {
     try {
       if (tab === 'signup') {
         if (!form.email || !form.password || !form.name || !form.org) { setError('Please fill all fields.'); setLoading(false); return; }
+        // Check for valid invite
+        const inviteToken = form.inviteToken || new URLSearchParams(window.location.search).get('invite');
+        if (inviteToken) {
+          const { data: invData } = await supabase.from('invitations').select('*').eq('token', inviteToken).single();
+          if (!invData) { setError('Invalid or expired invite link.'); setLoading(false); return; }
+          if (invData.email && invData.email !== form.email.toLowerCase()) { setError('This invite was sent to ' + invData.email + '. Please use that email address.'); setLoading(false); return; }
+        } else if (form.email.toLowerCase() !== 'ben@tradecoffeeco.com') {
+          setError('Account creation requires an invite link. Contact ben@tradecoffeeco.com to request access.');
+          setLoading(false); return;
+        }
         const { data: authData, error: authErr } = await supabase.auth.signUp({ email: form.email, password: form.password });
         if (authErr) { setError(authErr.message); setLoading(false); return; }
         const userId = authData.user.id;
-        const { data: orgData, error: orgErr } = await supabase.from('organizations').insert({ name: form.org, owner_id: userId }).select().single();
-        if (orgErr) { setError(orgErr.message); setLoading(false); return; }
-        const { error: profErr } = await supabase.from('profiles').insert({ id: userId, org_id: orgData.id, name: form.name, email: form.email, role: 'owner' });
-        if (profErr) { setError(profErr.message); setLoading(false); return; }
-        const user = { id: userId, name: form.name, email: form.email, orgId: orgData.id, role: 'owner' };
-        onAuth(user, orgData);
+        let finalOrg, finalOrgId;
+        if (inviteToken) {
+          const { data: invData2 } = await supabase.from('invitations').select('*').eq('token', inviteToken).single();
+          finalOrgId = invData2?.org_id;
+          const { data: existOrg } = await supabase.from('organizations').select('*').eq('id', finalOrgId).single();
+          finalOrg = existOrg;
+          await supabase.from('profiles').insert({ id: userId, org_id: finalOrgId, name: form.name||invData2?.name||'', email: form.email, role: 'member' });
+          await supabase.from('invitations').update({ status: 'accepted' }).eq('token', inviteToken);
+        } else {
+          const { data: orgData, error: orgErr } = await supabase.from('organizations').insert({ name: form.org||'Trade', owner_id: userId }).select().single();
+          if (orgErr) { setError(orgErr.message); setLoading(false); return; }
+          finalOrg = orgData; finalOrgId = orgData.id;
+          await supabase.from('profiles').insert({ id: userId, org_id: finalOrgId, name: form.name, email: form.email, role: 'owner' });
+        }
+        const userObj = { id: userId, name: form.name, email: form.email, orgId: finalOrgId, role: inviteToken ? 'member' : 'owner' };
+        onAuth(userObj, finalOrg);
       } else {
         const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({ email: form.email, password: form.password });
         if (authErr) { setError(authErr.message); setLoading(false); return; }
@@ -698,8 +730,9 @@ function AuthScreen({ onAuth }) {
           <button className={`auth-tab ${tab==='signin'?'active':''}`} onClick={()=>setTab('signin')}>Sign In</button>
         </div>
         {tab === 'signup' && <>
+          {form.inviteToken && <div style={{background:'rgba(45,212,160,.1)',border:'1px solid rgba(45,212,160,.3)',borderRadius:8,padding:'10px 12px',fontSize:12,color:'var(--accent3)',marginBottom:12}}>✓ You have been invited to join the Trade Hiring Command Center. Create your account below.</div>}
           <div className="field"><label>Your Name</label><input placeholder="Ben Fischman" value={form.name} onChange={e=>update('name',e.target.value)}/></div>
-          <div className="field"><label>Company / Organization</label><input placeholder="Your Company" value={form.org} onChange={e=>update('org',e.target.value)}/></div>
+          {!form.inviteToken && <div className="field"><label>Company / Organization</label><input placeholder="Your Company" value={form.org} onChange={e=>update('org',e.target.value)}/></div>}
         </>}
         <div className="field"><label>Email</label><input type="email" placeholder="you@company.com" value={form.email} onChange={e=>update('email',e.target.value)}/></div>
         <div className="field"><label>Password</label><input type="password" placeholder="••••••••" value={form.password} onChange={e=>update('password',e.target.value)}/></div>
@@ -4251,6 +4284,162 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
   );
 }
 
+
+/* ═══════════════════════════════════════
+   INVITE MANAGEMENT
+   ═══════════════════════════════════════ */
+function InviteView({ user, org }) {
+  const [invites, setInvites] = React.useState([]);
+  const [email, setEmail] = React.useState('');
+  const [name, setName] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [copied, setCopied] = React.useState('');
+  const isAdmin = user.role === 'owner' || user.email === 'ben@tradecoffeeco.com';
+
+  React.useEffect(function() {
+    if (!isAdmin) return;
+    loadInvites();
+  }, []);
+
+  var loadInvites = async function() {
+    if (DEMO_MODE) {
+      setInvites(window._hccInvites || []);
+      return;
+    }
+    try {
+      var result = await supabase.from('invitations').select('*').eq('org_id', org?.id||user.orgId).order('created_at', {ascending:false});
+      setInvites(result.data || []);
+    } catch(e) {}
+  };
+
+  var sendInvite = async function() {
+    if (!email.trim()) return;
+    setLoading(true);
+    var token = uid() + uid();
+    var invite = {
+      id: uid(),
+      email: email.trim().toLowerCase(),
+      name: name.trim(),
+      org_id: org?.id || user.orgId,
+      org_name: org?.name || 'Trade',
+      token: token,
+      invited_by: user.name || user.email,
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    if (DEMO_MODE) {
+      window._hccInvites = [...(window._hccInvites||[]), invite];
+      setInvites(window._hccInvites);
+    } else {
+      try {
+        await supabase.from('invitations').insert(invite);
+        await loadInvites();
+      } catch(e) { alert('Could not save invite: ' + e.message); }
+    }
+    setEmail('');
+    setName('');
+    setLoading(false);
+  };
+
+  var revokeInvite = async function(id) {
+    if (!window.confirm('Revoke this invite?')) return;
+    if (DEMO_MODE) {
+      window._hccInvites = (window._hccInvites||[]).filter(function(i){return i.id!==id;});
+      setInvites(window._hccInvites);
+      return;
+    }
+    await supabase.from('invitations').delete().eq('id', id);
+    await loadInvites();
+  };
+
+  var getInviteLink = function(token, invEmail) {
+    return window.location.href.split('?')[0] + '?invite=' + token;
+  };
+
+  var copyLink = function(token, invEmail, id) {
+    navigator.clipboard.writeText(getInviteLink(token, invEmail));
+    setCopied(id);
+    setTimeout(function(){setCopied('');}, 2000);
+  };
+
+  var copyEmail = function(invite) {
+    var link = getInviteLink(invite.token, invite.email);
+    var text = "Hi " + (invite.name||'there') + "," + String.fromCharCode(10) + String.fromCharCode(10) +
+      "You've been invited to access the Trade Hiring Command Center." + String.fromCharCode(10) + String.fromCharCode(10) +
+      "Click this link to create your account:" + String.fromCharCode(10) + link + String.fromCharCode(10) + String.fromCharCode(10) +
+      "You'll be asked to set a password. Use the email address this was sent to (" + invite.email + ")." + String.fromCharCode(10) + String.fromCharCode(10) +
+      "— " + (user.name || 'Ben');
+    navigator.clipboard.writeText(text);
+    setCopied('email-' + invite.id);
+    setTimeout(function(){setCopied('');}, 2000);
+  };
+
+  if (!isAdmin) return <div className="page"><div className="empty-state"><div className="empty-icon">🔐</div><div className="empty-title">Admin access only</div></div></div>;
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div><div className="page-title">Invite Team Members</div><div className="page-sub">Invite people to access the Hiring Command Center</div></div>
+      </div>
+
+      <div className="card mb-4">
+        <div className="section-title">Send an Invite</div>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}}>
+          <div className="field" style={{margin:0,flex:1,minWidth:180}}>
+            <label>Name</label>
+            <input placeholder="Jane Smith" value={name} onChange={function(e){setName(e.target.value);}}/>
+          </div>
+          <div className="field" style={{margin:0,flex:2,minWidth:220}}>
+            <label>Email Address</label>
+            <input type="email" placeholder="jane@company.com" value={email} onChange={function(e){setEmail(e.target.value);}}
+              onKeyDown={function(e){if(e.key==='Enter')sendInvite();}}/>
+          </div>
+          <button className="btn btn-primary" onClick={sendInvite} disabled={loading||!email.trim()} style={{marginBottom:0}}>
+            {loading ? '...' : '+ Generate Invite'}
+          </button>
+        </div>
+        <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>
+          This generates a unique invite link. Copy it and send via email — the recipient uses it to create their account and automatically joins the Trade workspace.
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="section-title">Pending & Active Invites ({invites.length})</div>
+        {invites.length === 0
+          ? <div className="text-muted text-sm">No invites sent yet.</div>
+          : <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {invites.map(function(inv) {
+                return (
+                  <div key={inv.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)',flexWrap:'wrap'}}>
+                    <div style={{flex:1,minWidth:160}}>
+                      <div style={{fontWeight:600,fontSize:13}}>{inv.name||inv.email}</div>
+                      <div style={{fontSize:11,color:'var(--muted)'}}>{inv.email}</div>
+                    </div>
+                    <div style={{fontSize:11,color:'var(--muted)'}}>Invited by {inv.invited_by} · {fmtDate(inv.created_at)}</div>
+                    <span className={'badge ' + (inv.status==='accepted'?'badge-green':'badge-yellow')} style={{fontSize:10}}>
+                      {inv.status==='accepted'?'Joined':'Pending'}
+                    </span>
+                    <div style={{display:'flex',gap:6}}>
+                      <button className="btn btn-secondary btn-xs" onClick={function(){copyLink(inv.token, inv.email, inv.id);}}>
+                        {copied===inv.id?'✓ Copied!':'🔗 Copy Link'}
+                      </button>
+                      <button className="btn btn-secondary btn-xs" onClick={function(){copyEmail(inv);}}>
+                        {copied==='email-'+inv.id?'✓ Copied!':'📧 Copy Email'}
+                      </button>
+                      {inv.status!=='accepted' && (
+                        <button className="btn btn-ghost btn-xs" style={{color:'var(--muted)'}} onClick={function(){revokeInvite(inv.id);}}>Revoke</button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+        }
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════
    ADMIN VIEW
    ═══════════════════════════════════════ */
@@ -4551,7 +4740,8 @@ function App() {
     { id:'jdbuilder', icon:'✍️', label:'JD Builder' },
     { id:'requirements', icon:'📚', label:'Requirements Library' },
     { id:'linkedin', icon:'💼', label:'LinkedIn' },
-    { id:'admin', icon:'🔐', label:'Admin' },
+    { id:'invite', icon:'✉️', label:'Invite' },
+  { id:'admin', icon:'🔐', label:'Admin' },
   ];
 
   const renderView = () => {
@@ -4566,6 +4756,7 @@ function App() {
       case 'team': return <TeamScoringView positions={positions} candidates={candidates} setCandidates={setCandidates}/>;
       case 'jdbuilder': return <JDBuilderView positions={positions} setPositions={setPositions} requirements={requirements}/>;
       case 'requirements': return <RequirementsView requirements={requirements} setRequirements={setRequirements}/>;
+      case 'invite': return <InviteView user={user} org={org}/>;
       case 'admin': return <AdminView user={user}/>;
       default: return null;
     }
