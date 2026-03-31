@@ -4308,9 +4308,27 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
 
   if (!cand || !pos) return <div className="external-bg"><div className="external-card"><div style={{textAlign:'center',color:'var(--muted)'}}>Scorecard not found.</div></div></div>;
 
-  const submit = () => {
+  const submit = async () => {
     const submission = { evaluatorName:evaluator.name, evaluatorEmail:evaluator.email, scores, recommendation, notes, submittedAt:today() };
-    setCandidates(cs=>cs.map(c=>c.id===candidateId?{...c,teamScores:[...(c.teamScores||[]),submission]}:c));
+    // Update local state
+    const updatedCandidates = candidates.map(c=>c.id===candidateId?{...c,teamScores:[...(c.teamScores||[]),submission]}:c);
+    setCandidates(updatedCandidates);
+    // Also write directly to Supabase since there is no logged-in user to trigger the normal sync
+    if (!DEMO_MODE && supabase) {
+      try {
+        // Find the org_id by querying app_data for this candidate
+        const result = await supabase.from('app_data').select('org_id').eq('data_type','candidates').then(function(r){
+          if (!r.data) return null;
+          return r.data.find(function(row){ return Array.isArray(row.data) && row.data.find(function(c){return c.id===candidateId;}); });
+        });
+        if (result && result.org_id) {
+          await supabase.from('app_data').upsert(
+            { org_id: result.org_id, data_type: 'candidates', data: updatedCandidates, updated_at: new Date().toISOString() },
+            { onConflict: 'org_id,data_type' }
+          );
+        }
+      } catch(e) { console.warn('Could not persist team score:', e); }
+    }
     setSubmitted(true);
   };
 
@@ -4690,25 +4708,27 @@ function App() {
   // Check URL for external scorecard
   const urlParams = new URLSearchParams(window.location.search);
   const scorecardId = urlParams.get('scorecard');
+  const [scorecardReady, setScorecardReady] = useState(!scorecardId);
 
   // Load data for external scorecard without login
   useEffect(function(){
-    if (!scorecardId || DEMO_MODE || !supabase) return;
-    // Fetch all app_data to find this candidate
+    if (!scorecardId) return;
+    if (DEMO_MODE || !supabase) { setScorecardReady(true); return; }
     supabase.from('app_data').select('*').then(function(result){
-      if (!result.data) return;
-      result.data.forEach(function(row){
-        if (row.data_type==='candidates' && Array.isArray(row.data)) {
-          var found = row.data.find(function(c){return c.id===scorecardId;});
-          if (found) {
-            setCandidatesState(row.data);
-            // Also load positions for same org
-            var posRow = result.data.find(function(r){return r.data_type==='positions' && r.org_id===row.org_id;});
-            if (posRow && posRow.data) setPositionsState(posRow.data);
+      if (result.data) {
+        result.data.forEach(function(row){
+          if (row.data_type==='candidates' && Array.isArray(row.data)) {
+            var found = row.data.find(function(c){return c.id===scorecardId;});
+            if (found) {
+              setCandidatesState(row.data);
+              var posRow = result.data.find(function(r){return r.data_type==='positions' && r.org_id===row.org_id;});
+              if (posRow && posRow.data) setPositionsState(posRow.data);
+            }
           }
-        }
-      });
-    });
+        });
+      }
+      setScorecardReady(true);
+    }).catch(function(){ setScorecardReady(true); });
   }, [scorecardId]);
 
   // Data persistence handled in setters above
@@ -4848,6 +4868,14 @@ function App() {
 
   // If external scorecard link
   if (scorecardId) {
+    if (!scorecardReady) return (
+      <div className="external-bg" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <div style={{textAlign:'center',color:'var(--muted)'}}>
+          <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+          <div style={{fontSize:14,fontWeight:600}}>Loading scorecard...</div>
+        </div>
+      </div>
+    );
     return <ExternalScorecard candidateId={scorecardId} candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
   }
 
