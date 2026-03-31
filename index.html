@@ -4542,6 +4542,26 @@ function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const scorecardId = urlParams.get('scorecard');
 
+  // Load data for external scorecard without login
+  useEffect(function(){
+    if (!scorecardId || DEMO_MODE || !supabase) return;
+    // Fetch all app_data to find this candidate
+    supabase.from('app_data').select('*').then(function(result){
+      if (!result.data) return;
+      result.data.forEach(function(row){
+        if (row.data_type==='candidates' && Array.isArray(row.data)) {
+          var found = row.data.find(function(c){return c.id===scorecardId;});
+          if (found) {
+            setCandidatesState(row.data);
+            // Also load positions for same org
+            var posRow = result.data.find(function(r){return r.data_type==='positions' && r.org_id===row.org_id;});
+            if (posRow && posRow.data) setPositionsState(posRow.data);
+          }
+        }
+      });
+    });
+  }, [scorecardId]);
+
   // Data persistence handled in setters above
 
   // Refresh data from Supabase when app comes back into focus
