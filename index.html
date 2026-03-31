@@ -2537,7 +2537,7 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
             <div>
               <div className="section-title" style={{margin:0}}>Trade Values Alignment</div>
-              <div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>Rate how well this candidate demonstrates each core value</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>Based on what you have seen so far — do you believe this candidate can genuinely live these values at Trade?</div>
             </div>
             {(()=>{
               var vs = cand.valueScores||{};
@@ -2550,11 +2550,11 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
             })()}
           </div>
           {[
-            {id:'connection', label:'Invest in Connection', desc:'Builds real relationships, leads with empathy, shows up authentically, is kind and genuine with teammates, roasters, and customers.'},
-            {id:'customer', label:'Customer First', desc:'Brings the customer into every decision. Goes beyond data to truly understand who they serve and adjusts goals when they conflict with what is right for the customer.'},
-            {id:'impact', label:'Chart the Most Impactful Path', desc:'Sets ambitious goals, holds themselves accountable to real outcomes. Spots opportunities, takes initiative, drives results — not busy work.'},
-            {id:'challenge', label:'Challenge Ideas, Not People', desc:'Debates openly, assumes positive intent, trusts others judgment. Once a decision is made, commits fully and moves forward as one team.'},
-            {id:'constraints', label:'Use Constraints as Catalysts', desc:'Takes smart risks, owns mistakes, finds creative workarounds. Operates with low ego, asks for help, keeps momentum over being right.'}
+            {id:'connection', label:'Invest in Connection', desc:'Did they show genuine warmth and curiosity about the people around them? Do you believe they will build real relationships — with teammates, roasters, and customers — not just transactional ones?'},
+            {id:'customer', label:'Customer First', desc:'Did they naturally center the customer in their thinking and examples? Do you believe they will bring the customer into every room and push back when goals conflict with what is right for the people they serve?'},
+            {id:'impact', label:'Chart the Most Impactful Path', desc:'Did they demonstrate a bias toward real outcomes over activity? Do you believe they will set ambitious goals, hold themselves accountable, and take initiative without needing to be pointed at the opportunity?'},
+            {id:'challenge', label:'Challenge Ideas, Not People', desc:'Did they engage in debate with positive intent and genuine openness? Do you believe they will disagree productively, commit once a decision is made, and show up the same way every day?'},
+            {id:'constraints', label:'Use Constraints as Catalysts', desc:'Did they show creativity and low ego when things got hard? Do you believe they will take smart risks, own their mistakes, ask for help, and find a way through rather than around?'}
           ].map(function(val){
             var score = (cand.valueScores||{})[val.id];
             var setValueScore = function(v) {
