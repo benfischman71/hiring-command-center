@@ -4243,7 +4243,7 @@ function CombinedScorecardModal({ cand, pos, teamScores, user, onClose }) {
   );
 }
 
-function TeamScoringView({ positions, candidates, setCandidates }) {
+function TeamScoringView({ positions, candidates, setCandidates, user }) {
   const [selPos, setSelPos] = useState('');
   const [selCand, setSelCand] = useState('');
   const [copied, setCopied] = useState(false);
@@ -5363,7 +5363,7 @@ function App() {
       case 'interviews': return <InterviewsView candidates={candidates} setCandidates={setCandidates} positions={positions} initialCand={filterInterviewCand} onCandUsed={()=>setFilterInterviewCand('')}/>;
       case 'references': return <ReferenceChecksView candidates={candidates} setCandidates={setCandidates} positions={positions}/>;
       case 'comparison': return <ComparisonView candidates={candidates} positions={positions}/>;
-      case 'team': return <TeamScoringView positions={positions} candidates={candidates} setCandidates={setCandidates}/>;
+      case 'team': return <TeamScoringView positions={positions} candidates={candidates} setCandidates={setCandidates} user={user}/>;
       case 'jdbuilder': return <JDBuilderView positions={positions} setPositions={setPositions} requirements={requirements}/>;
       case 'requirements': return <RequirementsView requirements={requirements} setRequirements={setRequirements}/>;
       case 'invite': return <InviteView user={user} org={org}/>;
