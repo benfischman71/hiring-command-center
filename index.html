@@ -1608,7 +1608,12 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
   const filtered = candidates.filter(c=>
     (filterPos==='all'||c.positionId===filterPos) &&
     (filterStage==='all'||c.stage===filterStage)
-  );
+  ).sort(function(a,b){
+    var aRej = a.stage==='Rejected'||a.stage==='Hired' ? 1 : 0;
+    var bRej = b.stage==='Rejected'||b.stage==='Hired' ? 1 : 0;
+    if(aRej!==bRej) return aRej-bRej;
+    return 0;
+  });
 
   const openEdit = (c) => { setViewingProfile(null); setEditing(c); setShowModal(true); };
 
@@ -2362,7 +2367,7 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
   const cand = candidates.find(c=>c.id===selCand);
   const posForCand = pos || (cand ? positions.find(p=>p.id===cand.positionId) : null);
 
-  const candsByPos = selPos ? candidates.filter(c=>c.positionId===selPos) : candidates;
+  const candsByPos = (selPos ? candidates.filter(c=>c.positionId===selPos) : candidates).filter(c=>c.stage!=='Rejected');
 
   const setScore = (reqId, field, val) => {
     setCandidates(cs => cs.map(c => {
@@ -2491,7 +2496,6 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
                             {n} = {scoreLabel(n)}
                           </span>;
                         })}
-                        <span style={{fontSize:10,color:'var(--muted)',marginLeft:4,lineHeight:2}}>Rate evidence seen — not performance against a bar they haven't hit yet</span>
                       </div>
                     </th>
                   </tr>
@@ -3257,7 +3261,7 @@ function InterviewsView({ candidates, setCandidates, positions, initialCand, onC
         <label>Candidate</label>
         <select value={selCand} onChange={e=>{setSelCand(e.target.value);setRunning(false);setElapsed(0)}}>
           <option value="">Select candidate...</option>
-          {candidates.map(c=><option key={c.id} value={c.id}>{c.name} — {positions.find(p=>p.id===c.positionId)?.title||'?'}</option>)}
+          {candidates.filter(c=>c.stage!=='Rejected').map(c=><option key={c.id} value={c.id}>{c.name} — {positions.find(p=>p.id===c.positionId)?.title||'?'}</option>)}
         </select>
       </div>
 
@@ -3518,7 +3522,7 @@ function ReferenceChecksView({ candidates, setCandidates, positions }) {
         <label>Candidate</label>
         <select value={selCand} onChange={e=>setSelCand(e.target.value)}>
           <option value="">Select candidate...</option>
-          {candidates.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          {candidates.filter(c=>c.stage!=='Rejected').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
@@ -3623,7 +3627,7 @@ function ComparisonView({ candidates, positions }) {
   const [selCands, setSelCands] = useState([]);
 
   const pos = positions.find(p=>p.id===selPos);
-  const candsByPos = selPos ? candidates.filter(c=>c.positionId===selPos) : [];
+  const candsByPos = selPos ? candidates.filter(c=>c.positionId===selPos&&c.stage!=='Rejected') : [];
 
   const toggleCand = (id) => {
     if (selCands.includes(id)) setSelCands(s=>s.filter(x=>x!==id));
@@ -3754,7 +3758,7 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
           <label>Candidate</label>
           <select value={selCand} onChange={e=>setSelCand(e.target.value)}>
             <option value="">Select candidate...</option>
-            {candidates.filter(c=>!selPos||c.positionId===selPos).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+            {candidates.filter(c=>(!selPos||c.positionId===selPos)&&c.stage!=='Rejected').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
       </div>
