@@ -4006,6 +4006,19 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
               <div style={{display:'flex',flexDirection:'column',gap:6}}>
                 {(cand.interviewers||[]).map(function(iv){
                   var ivLink = shareLink + '&interviewer=' + encodeURIComponent(iv.name);
+                  var sendScorecardEmail = function() {
+                    var NL = '%0D%0A';
+                    var subject = encodeURIComponent('Interview Scorecard — ' + cand.name + ' for ' + (pos ? pos.title : 'open role'));
+                    var body = encodeURIComponent('Hi ' + iv.name.split(' ')[0] + ',') + NL + NL +
+                      encodeURIComponent('Please use the link below to submit your scorecard for ' + cand.name + ' (' + (pos ? pos.title : 'open role') + ').') + NL + NL +
+                      encodeURIComponent('Your personal scorecard link:') + NL +
+                      encodeURIComponent(ivLink) + NL + NL +
+                      encodeURIComponent('This link is set up for you specifically. It takes about 5 minutes — you will rate the candidate on key requirements and share your overall recommendation.') + NL + NL +
+                      encodeURIComponent('Please complete it within 24 hours if possible.') + NL + NL +
+                      encodeURIComponent('Thanks,') + NL +
+                      encodeURIComponent('Ben');
+                    window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+                  };
                   return (
                     <div key={iv.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)'}}>
                       <div style={{width:28,height:28,borderRadius:'50%',background:'linear-gradient(135deg,var(--accent),var(--accent2))',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>
@@ -4015,11 +4028,14 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
                         <div style={{fontWeight:600,fontSize:12}}>{iv.name}</div>
                         {iv.role && <div style={{fontSize:10,color:'var(--muted)'}}>{iv.role}</div>}
                       </div>
-                      <button className="btn btn-primary btn-xs" onClick={function(){
-                        navigator.clipboard.writeText(ivLink);
-                        setCopied(iv.id);
-                        setTimeout(function(){setCopied(false);},2000);
-                      }}>{copied===iv.id?'✓ Copied!':'📋 Copy Link'}</button>
+                      <div style={{display:'flex',gap:6}}>
+                        <button className="btn btn-secondary btn-xs" onClick={function(){
+                          navigator.clipboard.writeText(ivLink);
+                          setCopied(iv.id);
+                          setTimeout(function(){setCopied(false);},2000);
+                        }}>{copied===iv.id?'✓ Copied!':'📋 Copy'}</button>
+                        <button className="btn btn-primary btn-xs" onClick={sendScorecardEmail}>📧 Email</button>
+                      </div>
                     </div>
                   );
                 })}
@@ -4027,43 +4043,46 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
             </div>
           )}
 
-          {/* Generic link */}
-          <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>
-            {(cand.interviewers||[]).length > 0 ? 'Generic Link' : 'Scorecard Link'}
-          </div>
-          <div className="share-code-box">
-            <div className="share-code" style={{fontSize:13,wordBreak:'break-all'}}>{shareLink}</div>
-            <button className="btn btn-primary btn-sm" onClick={copy}>{copied===true?'✓ Copied!':'📋 Copy'}</button>
-          </div>
           {(cand.interviewers||[]).length === 0 && (
-            <div style={{fontSize:11,color:'var(--muted)',marginTop:8}}>
-              Tip: Add interviewers to this candidate in the Candidates page to get per-person links.
+            <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>
+              Tip: Add interviewers to this candidate in Edit Candidate to get per-person links.
             </div>
           )}
         </div>
 
         <div className="card">
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-            <div className="section-title" style={{margin:0}}>Team Scorecards ({teamScores.length})</div>
-            {teamScores.length>0 && cand && pos && (
-              <div style={{fontSize:11,color:'var(--muted)'}}>{teamScores.length} interviewer{teamScores.length!==1?'s':''} scored</div>
-            )}
+            <div className="section-title" style={{margin:0}}>Team Scorecards</div>
+            
           </div>
-          {teamScores.length===0
-            ? <div className="text-muted text-sm">No team scores submitted yet. Share the link above with your interviewers.</div>
-            : (function(){
+          {(function(){
                 var activeReqs = (pos?.requirements||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
                 var scoreColor = function(s){ return s>=4?'#2dd4a0':s===3?'#f7c94f':s<=2?'#f75c5c':'var(--muted)'; };
                 var recColor = function(r){ return r&&r.includes('Yes')?'badge-green':r==='Maybe'?'badge-yellow':r&&r.includes('No')?'badge-red':'badge-gray'; };
+                // Merge owner's direct scores as a row
+                var ownerRow = null;
+                if (cand && cand.scores && Object.keys(cand.scores).length > 0) {
+                  ownerRow = {
+                    evaluatorName: user.name || 'You',
+                    evaluatorEmail: user.email || '',
+                    scores: Object.fromEntries(Object.entries(cand.scores).map(function(e){ return [e[0], {score: e[1].score, note: e[1].note}]; })),
+                    recommendation: cand.recommendation || '',
+                    notes: cand.overallNotes || '',
+                    submittedAt: null,
+                    isOwner: true
+                  };
+                }
+                var allScores = ownerRow ? [ownerRow].concat(teamScores) : teamScores;
+                if (allScores.length === 0) return <div className="text-muted text-sm">No scores yet. Score directly in Scorecards or share links with interviewers above.</div>;
                 return (
                   <div>
                     {/* Recommendation summary row */}
                     <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-                      {teamScores.map(function(ts,i){
+                      {allScores.map(function(ts,i){
                         return (
-                          <div key={i} style={{flex:1,minWidth:120,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',textAlign:'center'}}>
-                            <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{ts.evaluatorName}</div>
-                            <div style={{fontSize:10,color:'var(--muted)',marginBottom:6}}>{fmtDate(ts.submittedAt)}</div>
+                          <div key={i} style={{flex:1,minWidth:120,background: ts.isOwner ? 'rgba(79,142,247,.08)' : 'var(--surface2)',border:'1px solid '+(ts.isOwner?'rgba(79,142,247,.3)':'var(--border)'),borderRadius:8,padding:'10px 12px',textAlign:'center'}}>
+                            <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{ts.evaluatorName}{ts.isOwner&&<span style={{fontSize:9,color:'var(--accent)',marginLeft:4,fontWeight:600}}>YOU</span>}</div>
+                            <div style={{fontSize:10,color:'var(--muted)',marginBottom:6}}>{ts.submittedAt ? fmtDate(ts.submittedAt) : 'Direct score'}</div>
                             {ts.recommendation && <span className={'badge ' + recColor(ts.recommendation)} style={{fontSize:11}}>{ts.recommendation}</span>}
                           </div>
                         );
@@ -4077,15 +4096,15 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
                           <thead>
                             <tr style={{borderBottom:'2px solid var(--border)'}}>
                               <th style={{textAlign:'left',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:160}}>Requirement</th>
-                              {teamScores.map(function(ts,i){
-                                return <th key={i} style={{textAlign:'center',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:90}}>{ts.evaluatorName.split(' ')[0]}</th>;
+                              {allScores.map(function(ts,i){
+                                return <th key={i} style={{textAlign:'center',padding:'8px 10px',fontWeight:700,fontSize:11,color:ts.isOwner?'var(--accent)':'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:90}}>{ts.evaluatorName.split(' ')[0]}{ts.isOwner?' ★':''}</th>;
                               })}
                               <th style={{textAlign:'center',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:70}}>Avg</th>
                             </tr>
                           </thead>
                           <tbody>
                             {activeReqs.map(function(req){
-                              var reqScores = teamScores.map(function(ts){ return ts.scores&&ts.scores[req.id]?ts.scores[req.id].score:null; });
+                              var reqScores = allScores.map(function(ts){ return ts.scores&&ts.scores[req.id]?ts.scores[req.id].score:null; });
                               var validScores = reqScores.filter(function(s){return s!=null;});
                               var avg = validScores.length ? (validScores.reduce(function(a,b){return a+b;},0)/validScores.length) : null;
                               return (
@@ -4098,7 +4117,7 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
                                     </div>
                                   </td>
                                   {reqScores.map(function(s,i){
-                                    var note = teamScores[i].scores&&teamScores[i].scores[req.id]?teamScores[i].scores[req.id].note:'';
+                                    var note = allScores[i].scores&&allScores[i].scores[req.id]?allScores[i].scores[req.id].note:'';
                                     return (
                                       <td key={i} style={{textAlign:'center',padding:'8px 6px'}} title={note||''}>
                                         {s ? <div style={{width:28,height:28,borderRadius:6,background:scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,color:'#fff',margin:'auto'}}>{s}</div>
@@ -4119,10 +4138,10 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
                     )}
 
                     {/* Individual notes */}
-                    {teamScores.some(function(ts){return ts.notes;}) && (
+                    {allScores.some(function(ts){return ts.notes;}) && (
                       <div style={{marginTop:16}}>
                         <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Overall Notes</div>
-                        {teamScores.filter(function(ts){return ts.notes;}).map(function(ts,i){
+                        {allScores.filter(function(ts){return ts.notes;}).map(function(ts,i){
                           return (
                             <div key={i} style={{marginBottom:8,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)'}}>
                               <div style={{fontWeight:600,fontSize:12,marginBottom:4}}>{ts.evaluatorName}</div>
