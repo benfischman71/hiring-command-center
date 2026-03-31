@@ -776,6 +776,12 @@ function Dashboard({ user, org, positions, candidates, setView, setFilterPos }) 
               </div>
             );
           })}
+          <div style={{paddingTop:10,textAlign:'center'}}>
+            <button onClick={()=>setView&&setView('candidates')}
+              style={{fontSize:12,fontWeight:600,color:'var(--accent)',background:'none',border:'none',cursor:'pointer',padding:'4px 12px',borderRadius:20,background:'rgba(79,142,247,.08)'}}>
+              See all candidates →
+            </button>
+          </div>
         </div>
       </div>
     </div>
