@@ -4362,16 +4362,21 @@ function InviteView({ user, org }) {
     setTimeout(function(){setCopied('');}, 2000);
   };
 
-  var copyEmail = function(invite) {
+  var openEmail = function(invite) {
+    var NL = '%0D%0A';
     var link = getInviteLink(invite.token, invite.email);
-    var text = "Hi " + (invite.name||'there') + "," + String.fromCharCode(10) + String.fromCharCode(10) +
-      "You've been invited to access the Trade Hiring Command Center." + String.fromCharCode(10) + String.fromCharCode(10) +
-      "Click this link to create your account:" + String.fromCharCode(10) + link + String.fromCharCode(10) + String.fromCharCode(10) +
-      "You'll be asked to set a password. Use the email address this was sent to (" + invite.email + ")." + String.fromCharCode(10) + String.fromCharCode(10) +
-      "— " + (user.name || 'Ben');
-    navigator.clipboard.writeText(text);
-    setCopied('email-' + invite.id);
-    setTimeout(function(){setCopied('');}, 2000);
+    var subject = encodeURIComponent('You have been invited to the Trade Hiring Command Center');
+    var body = encodeURIComponent('Hi ' + (invite.name||'there') + ',') + NL + NL +
+      encodeURIComponent("I'd like to give you access to Trade's Hiring Command Center (HCC) — our internal tool for managing candidates, scorecards, and the full hiring pipeline.") + NL + NL +
+      encodeURIComponent('Click the link below to create your account. It takes about 30 seconds — just set a password and you are in.') + NL + NL +
+      encodeURIComponent(link) + NL + NL +
+      encodeURIComponent('A few things to know:') + NL +
+      encodeURIComponent('- Use this exact email address (' + invite.email + ') to register') + NL +
+      encodeURIComponent('- You will have access to all open positions and candidates') + NL +
+      encodeURIComponent('- Your invite link is unique to you — please do not share it') + NL + NL +
+      encodeURIComponent('Let me know if you have any questions.') + NL + NL +
+      encodeURIComponent('— ' + (user.name || 'Ben'));
+    window.location.href = 'mailto:' + encodeURIComponent(invite.email) + '?subject=' + subject + '&body=' + body;
   };
 
   if (!isAdmin) return <div className="page"><div className="empty-state"><div className="empty-icon">🔐</div><div className="empty-title">Admin access only</div></div></div>;
@@ -4423,8 +4428,8 @@ function InviteView({ user, org }) {
                       <button className="btn btn-secondary btn-xs" onClick={function(){copyLink(inv.token, inv.email, inv.id);}}>
                         {copied===inv.id?'✓ Copied!':'🔗 Copy Link'}
                       </button>
-                      <button className="btn btn-secondary btn-xs" onClick={function(){copyEmail(inv);}}>
-                        {copied==='email-'+inv.id?'✓ Copied!':'📧 Copy Email'}
+                      <button className="btn btn-primary btn-xs" onClick={function(){openEmail(inv);}}>
+                        📧 Send Email Invite
                       </button>
                       {inv.status!=='accepted' && (
                         <button className="btn btn-ghost btn-xs" style={{color:'var(--muted)'}} onClick={function(){revokeInvite(inv.id);}}>Revoke</button>
