@@ -4263,6 +4263,41 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
                     )}
 
                     {/* Individual notes */}
+                    {/* Values scores summary */}
+                    {allScores.some(function(ts){return ts.valueScores&&Object.keys(ts.valueScores).length>0;}) && (
+                      <div style={{marginTop:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Values Alignment</div>
+                        <div style={{overflowX:'auto'}}>
+                          <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                            <thead>
+                              <tr style={{borderBottom:'2px solid var(--border)'}}>
+                                <th style={{textAlign:'left',padding:'6px 10px',fontSize:11,color:'var(--muted)',fontWeight:700,minWidth:160}}>Value</th>
+                                {allScores.map(function(ts,i){return <th key={i} style={{textAlign:'center',padding:'6px 10px',fontSize:11,color:ts.isOwner?'var(--accent)':'var(--muted)',fontWeight:700,minWidth:70}}>{ts.evaluatorName.split(' ')[0]}{ts.isOwner?' ★':''}</th>;})}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[{id:'connection',label:'Connection'},{id:'customer',label:'Customer'},{id:'impact',label:'Impact'},{id:'challenge',label:'Challenge'},{id:'constraints',label:'Constraints'}].map(function(val){
+                                return (
+                                  <tr key={val.id} style={{borderBottom:'1px solid var(--border)'}}>
+                                    <td style={{padding:'6px 10px',fontWeight:500}}>{val.label}</td>
+                                    {allScores.map(function(ts,i){
+                                      var s = ts.isOwner ? (ts.scores&&ts.scores[val.id]||null) : (ts.valueScores&&ts.valueScores[val.id]||null);
+                                      // For owner row, check cand.valueScores directly
+                                      if (ts.isOwner && cand) s = (cand.valueScores||{})[val.id]||null;
+                                      return <td key={i} style={{textAlign:'center',padding:'6px 4px'}}>
+                                        {s ? <div style={{width:26,height:26,borderRadius:6,background:scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,color:'#fff',margin:'auto'}}>{s}</div>
+                                           : <span style={{color:'var(--muted)',fontSize:11}}>—</span>}
+                                      </td>;
+                                    })}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
                     {allScores.some(function(ts){return ts.notes;}) && (
                       <div style={{marginTop:16}}>
                         <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Overall Notes</div>
@@ -4297,6 +4332,7 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
   const urlInterviewer = new URLSearchParams(window.location.search).get('interviewer') || '';
   const [evaluator, setEvaluator] = useState({ name: urlInterviewer, email:'' });
   const [scores, setScores] = useState({});
+  const [valueScores, setValueScores] = useState({});
   const [recommendation, setRecommendation] = useState('');
   const [notes, setNotes] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -4309,7 +4345,7 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
   if (!cand || !pos) return <div className="external-bg"><div className="external-card"><div style={{textAlign:'center',color:'var(--muted)'}}>Scorecard not found.</div></div></div>;
 
   const submit = async () => {
-    const submission = { evaluatorName:evaluator.name, evaluatorEmail:evaluator.email, scores, recommendation, notes, submittedAt:today() };
+    const submission = { evaluatorName:evaluator.name, evaluatorEmail:evaluator.email, scores, valueScores, recommendation, notes, submittedAt:today() };
     // Update local state
     const updatedCandidates = candidates.map(c=>c.id===candidateId?{...c,teamScores:[...(c.teamScores||[]),submission]}:c);
     setCandidates(updatedCandidates);
@@ -4427,6 +4463,29 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
               <input className="mt-2" style={{fontSize:12,padding:'6px 10px'}} placeholder="Optional note..." value={scores[req.id]?.note||''} onChange={e=>setScores(s=>({...s,[req.id]:{...s[req.id],note:e.target.value}}))}/>
             </div>
           ))}
+          {/* Trade Values Alignment */}
+          <div style={{marginTop:20,marginBottom:16,paddingTop:16,borderTop:'2px solid var(--border)'}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Trade Values Alignment</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginBottom:14,lineHeight:1.5}}>Based on what you have seen so far — do you believe this candidate can genuinely live these values at Trade?</div>
+            {[
+              {id:'connection', label:'Invest in Connection', desc:'Did they show genuine warmth and curiosity? Will they build real relationships — not just transactional ones?'},
+              {id:'customer', label:'Customer First', desc:'Did they naturally center the customer? Will they push back when goals conflict with what is right for the people they serve?'},
+              {id:'impact', label:'Chart the Most Impactful Path', desc:'Did they show a bias toward real outcomes over activity? Will they take initiative without needing to be pointed at the opportunity?'},
+              {id:'challenge', label:'Challenge Ideas, Not People', desc:'Did they debate with positive intent? Will they disagree productively and commit once a decision is made?'},
+              {id:'constraints', label:'Use Constraints as Catalysts', desc:'Did they show creativity and low ego when things got hard? Will they find a way through rather than around?'}
+            ].map(function(val){
+              var vs = valueScores[val.id];
+              return (
+                <div key={val.id} style={{marginBottom:16,padding:'12px',background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8}}>
+                  <div style={{fontWeight:600,fontSize:13,marginBottom:4}}>{val.label}</div>
+                  <div style={{fontSize:11,color:'var(--muted)',marginBottom:10,lineHeight:1.5}}>{val.desc}</div>
+                  <ScoreBtns value={vs} onChange={function(v){setValueScores(function(s){return {...s,[val.id]:v};});}}/>
+                  {vs && <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{scoreLabel(vs)}</div>}
+                </div>
+              );
+            })}
+          </div>
+
           <div className="field mt-4">
             <label>Overall Recommendation</label>
             <div className="flex" style={{flexWrap:'wrap',gap:6}}>
