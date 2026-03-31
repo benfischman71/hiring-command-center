@@ -4010,18 +4010,98 @@ function TeamScoringView({ positions, candidates, setCandidates }) {
         </div>
 
         <div className="card">
-          <div className="section-title">Team Submissions ({teamScores.length})</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+            <div className="section-title" style={{margin:0}}>Team Scorecards ({teamScores.length})</div>
+            {teamScores.length>0 && cand && pos && (
+              <div style={{fontSize:11,color:'var(--muted)'}}>{teamScores.length} interviewer{teamScores.length!==1?'s':''} scored</div>
+            )}
+          </div>
           {teamScores.length===0
             ? <div className="text-muted text-sm">No team scores submitted yet. Share the link above with your interviewers.</div>
-            : teamScores.map((ts,i)=>(
-                <div key={i} style={{padding:'12px 0',borderBottom:'1px solid var(--border)'}}>
-                  <div className="flex items-center justify-between">
-                    <div style={{fontWeight:600}}>{ts.evaluatorName}</div>
-                    <span className={`badge ${ts.recommendation?.includes('Yes')?'badge-green':ts.recommendation==='Maybe'?'badge-yellow':'badge-red'}`}>{ts.recommendation}</span>
+            : (function(){
+                var activeReqs = (pos?.requirements||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
+                var scoreColor = function(s){ return s>=4?'#2dd4a0':s===3?'#f7c94f':s<=2?'#f75c5c':'var(--muted)'; };
+                var recColor = function(r){ return r&&r.includes('Yes')?'badge-green':r==='Maybe'?'badge-yellow':r&&r.includes('No')?'badge-red':'badge-gray'; };
+                return (
+                  <div>
+                    {/* Recommendation summary row */}
+                    <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+                      {teamScores.map(function(ts,i){
+                        return (
+                          <div key={i} style={{flex:1,minWidth:120,background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',textAlign:'center'}}>
+                            <div style={{fontWeight:700,fontSize:12,marginBottom:4}}>{ts.evaluatorName}</div>
+                            <div style={{fontSize:10,color:'var(--muted)',marginBottom:6}}>{fmtDate(ts.submittedAt)}</div>
+                            {ts.recommendation && <span className={'badge ' + recColor(ts.recommendation)} style={{fontSize:11}}>{ts.recommendation}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Per-requirement grid */}
+                    {activeReqs.length > 0 && (
+                      <div style={{overflowX:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                          <thead>
+                            <tr style={{borderBottom:'2px solid var(--border)'}}>
+                              <th style={{textAlign:'left',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:160}}>Requirement</th>
+                              {teamScores.map(function(ts,i){
+                                return <th key={i} style={{textAlign:'center',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:90}}>{ts.evaluatorName.split(' ')[0]}</th>;
+                              })}
+                              <th style={{textAlign:'center',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.06em',minWidth:70}}>Avg</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeReqs.map(function(req){
+                              var reqScores = teamScores.map(function(ts){ return ts.scores&&ts.scores[req.id]?ts.scores[req.id].score:null; });
+                              var validScores = reqScores.filter(function(s){return s!=null;});
+                              var avg = validScores.length ? (validScores.reduce(function(a,b){return a+b;},0)/validScores.length) : null;
+                              return (
+                                <tr key={req.id} style={{borderBottom:'1px solid var(--border)'}}>
+                                  <td style={{padding:'8px 10px'}}>
+                                    <div style={{fontWeight:500}}>{req.name}</div>
+                                    <div style={{fontSize:10,color:'var(--muted)',marginTop:2,display:'flex',gap:4}}>
+                                      {req.mustHave && <span style={{color:'#f75c5c',fontWeight:600}}>Must Have</span>}
+                                      {(req.weight||1)>1 && <span style={{color:req.weight===3?'var(--accent2)':'var(--accent)',fontWeight:600}}>{req.weight}×</span>}
+                                    </div>
+                                  </td>
+                                  {reqScores.map(function(s,i){
+                                    var note = teamScores[i].scores&&teamScores[i].scores[req.id]?teamScores[i].scores[req.id].note:'';
+                                    return (
+                                      <td key={i} style={{textAlign:'center',padding:'8px 6px'}} title={note||''}>
+                                        {s ? <div style={{width:28,height:28,borderRadius:6,background:scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,color:'#fff',margin:'auto'}}>{s}</div>
+                                          : <div style={{color:'var(--muted)',fontSize:11}}>—</div>}
+                                        {note && <div style={{fontSize:9,color:'var(--muted)',marginTop:2,maxWidth:80,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',margin:'2px auto 0'}}>💬</div>}
+                                      </td>
+                                    );
+                                  })}
+                                  <td style={{textAlign:'center',padding:'8px 6px'}}>
+                                    {avg ? <div style={{fontWeight:700,fontSize:13,color:scoreColor(Math.round(avg))}}>{avg.toFixed(1)}</div> : <div style={{color:'var(--muted)',fontSize:11}}>—</div>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Individual notes */}
+                    {teamScores.some(function(ts){return ts.notes;}) && (
+                      <div style={{marginTop:16}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Overall Notes</div>
+                        {teamScores.filter(function(ts){return ts.notes;}).map(function(ts,i){
+                          return (
+                            <div key={i} style={{marginBottom:8,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)'}}>
+                              <div style={{fontWeight:600,fontSize:12,marginBottom:4}}>{ts.evaluatorName}</div>
+                              <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.6}}>{ts.notes}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-muted text-xs mt-1">{ts.evaluatorEmail} · Submitted {fmtDate(ts.submittedAt)}</div>
-                </div>
-              ))
+                );
+              })()
           }
         </div>
       </>}
@@ -4120,10 +4200,33 @@ function ExternalScorecard({ candidateId, candidates, setCandidates, positions }
 
         {step===2 && <>
           <div className="section-title">Rate the Candidate</div>
-          {(pos.requirements||[]).length===0 && <div className="text-muted text-sm">No requirements defined for this position.</div>}
-          {(pos.requirements||[]).map(req=>(
-            <div key={req.id} className="card-sm mb-3" style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8}}>
-              <div style={{fontWeight:600,fontSize:13,marginBottom:10}}>{req.name}{req.mustHave&&<span className="badge badge-red ml-2" style={{fontSize:10}}>Must Have</span>}</div>
+
+          {/* Rating scale */}
+          <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'10px 12px',marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:10,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Rating Scale</div>
+            <div style={{display:'flex',flexDirection:'column',gap:4}}>
+              {[[1,'No Signal','No evidence — did not demonstrate this','#f75c5c'],[2,'Weak Signal','Some hints but unconvincing','#f7834f'],[3,'Clear Signal','Solid, credible evidence','#f7c94f'],[4,'Strong Signal','Compelling — clearly stood out','#2dd4a0'],[5,'Exceptional Signal','Rare standout, well above the bar','#4f8ef7']].map(function(r){
+                return <div key={r[0]} style={{display:'flex',alignItems:'center',gap:8,fontSize:11}}>
+                  <div style={{width:18,height:18,borderRadius:4,background:r[3],display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#fff',flexShrink:0}}>{r[0]}</div>
+                  <span style={{fontWeight:600,color:r[3],minWidth:110}}>{r[1]}</span>
+                  <span style={{color:'var(--muted)'}}>{r[2]}</span>
+                </div>;
+              })}
+            </div>
+            <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid var(--border)',fontSize:11,color:'var(--muted)',lineHeight:1.5}}>
+              <strong style={{color:'var(--text2)'}}>Must Have</strong> = a score of 1 here disqualifies regardless of other scores.
+              <strong style={{color:'var(--text2)'}}> Weighted</strong> requirements (2× or 3×) count more toward the overall score.
+            </div>
+          </div>
+
+          {(pos.requirements||[]).filter(r=>r.active!==false).length===0 && <div className="text-muted text-sm">No requirements defined for this position.</div>}
+          {(pos.requirements||[]).filter(r=>r.active!==false).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);}).map(req=>(
+            <div key={req.id} className="card-sm mb-3" style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'12px'}}>
+              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8,flexWrap:'wrap'}}>
+                <span style={{fontWeight:600,fontSize:13,flex:1}}>{req.name}</span>
+                {req.mustHave && <span className="badge badge-red" style={{fontSize:10}}>Must Have</span>}
+                {(req.weight||1)>1 && <span style={{fontSize:10,fontWeight:700,color:req.weight===3?'var(--accent2)':'var(--accent)',background:req.weight===3?'rgba(124,92,252,.1)':'rgba(79,142,247,.1)',padding:'2px 6px',borderRadius:4}}>{req.weight}× weight</span>}
+              </div>
               <ScoreBtns value={scores[req.id]?.score} onChange={v=>setScores(s=>({...s,[req.id]:{...s[req.id],score:v}}))}/>
               {scores[req.id]?.score && <div style={{fontSize:11,color:'var(--muted)',marginTop:4}}>{scoreLabel(scores[req.id].score)}</div>}
               <input className="mt-2" style={{fontSize:12,padding:'6px 10px'}} placeholder="Optional note..." value={scores[req.id]?.note||''} onChange={e=>setScores(s=>({...s,[req.id]:{...s[req.id],note:e.target.value}}))}/>
