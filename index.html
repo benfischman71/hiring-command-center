@@ -269,150 +269,202 @@ tr:hover td{background:var(--surface2)}
 
 /* ── MOBILE RESPONSIVE ───────────────────────── */
 @media (max-width: 768px) {
-  /* Full screen app, no split layout */
+  /* ── LAYOUT ─────────────────────────────────── */
   .app { flex-direction: column; height: 100vh; overflow: hidden; }
 
-  /* TOP NAV BAR */
-  .sidebar {
-    width: 100%;
-    min-width: unset;
-    height: auto;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 0;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow: visible;
-  }
+  /* Hide desktop sidebar entirely on mobile */
+  .sidebar { display: none !important; }
 
-  /* Brand row */
-  .sidebar-brand {
+  /* Fixed bottom nav bar */
+  .mobile-nav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 200;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 4px;
+    gap: 2px;
+    align-items: stretch;
+  }
+  .mobile-nav::-webkit-scrollbar { display: none; }
+  .mobile-nav-item {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 0 0 auto;
+    min-width: 56px;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    border-radius: 10px;
+    margin: 4px 0;
+  }
+  .mobile-nav-item.active { color: var(--accent); background: rgba(79,142,247,.12); }
+  .mobile-nav-item .nav-icon { font-size: 20px; line-height: 1; }
+
+  /* Mobile top bar */
+  .mobile-topbar {
+    display: flex !important;
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px;
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
-    margin-bottom: 0;
-  }
-  .sidebar-org { font-size: 10px; }
-
-  /* Nav items: single horizontal scrolling row of icon+label pills */
-  .nav-section {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 6px 8px;
-    gap: 4px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    white-space: nowrap;
-  }
-  .nav-section::-webkit-scrollbar { display: none; }
-
-  .nav-item {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    padding: 6px 10px;
-    border-radius: 10px;
-    font-size: 10px;
-    font-weight: 600;
-    background: transparent;
-    color: var(--muted);
-    white-space: nowrap;
-    min-width: 52px;
-    border: none;
-    width: auto;
+    height: 52px;
     flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
-  .nav-item.active {
-    background: rgba(79,142,247,.15);
-    color: var(--accent);
-  }
-  .nav-item .nav-icon { font-size: 18px; width: auto; }
 
-  /* Hide sidebar footer - put account in brand bar */
-  .sidebar-footer { display: none; }
-
-  /* MAIN CONTENT - scrollable */
+  /* Main content - pad for bottom nav */
   .main {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    height: 0; /* forces flex child to scroll */
+    padding-bottom: 68px;
   }
 
-  .page { padding: 16px 14px; max-width: 100%; }
-  .page-header { flex-direction: column; gap: 10px; }
+  /* ── PAGE LAYOUT ─────────────────────────────── */
+  .page { padding: 14px 14px 20px; max-width: 100%; }
+  .page-header { flex-direction: column; gap: 10px; align-items: flex-start; }
   .page-header .btn { width: 100%; justify-content: center; }
   .page-title { font-size: 22px; }
 
-  /* Grids stack */
-  .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 12px; }
-
-  /* Stats 2-up */
-  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  /* ── GRIDS ───────────────────────────────────── */
+  .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 10px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
   .stat-card { padding: 12px; }
-  .stat-value { font-size: 24px; }
+  .stat-value { font-size: 22px; }
   .stat-label { font-size: 10px; }
 
-  /* Cards */
+  /* ── CARDS ───────────────────────────────────── */
   .card { padding: 14px; border-radius: 12px; }
 
-  /* Tables - horizontal scroll */
+  /* ── CANDIDATE CARDS (mobile replaces table) ─── */
+  .candidate-table { display: none !important; }
+  .candidate-cards { display: flex !important; flex-direction: column; gap: 10px; }
+  .candidate-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .candidate-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .candidate-card-name { font-weight: 700; font-size: 15px; color: var(--accent); }
+  .candidate-card-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .candidate-card-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .candidate-card-actions .btn { flex: 1; justify-content: center; min-width: 80px; }
+
+  /* ── TABLES ──────────────────────────────────── */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { font-size: 12px; min-width: 500px; }
+  table { font-size: 12px; }
   th, td { padding: 8px 10px; }
 
-  /* Modals - bottom sheet */
+  /* ── MODALS: full-screen bottom sheet ────────── */
   .modal-overlay { align-items: flex-end; padding: 0; }
   .modal {
-    max-width: 100%;
+    max-width: 100% !important;
     width: 100%;
     border-radius: 20px 20px 0 0;
-    position: relative;
-    bottom: auto;
-    max-height: 88vh;
+    max-height: 92vh;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  .modal-lg { max-width: 100%; }
-  .modal-header { padding: 16px 18px 0; }
-  .modal-body { padding: 14px 18px 18px; }
-  .modal-footer { padding: 0 18px 24px; }
+  .modal-lg { max-width: 100% !important; }
+  .modal-header { padding: 16px 18px 0; position: sticky; top: 0; background: var(--surface); z-index: 10; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .modal-body { padding: 14px 16px 16px; }
+  .modal-footer { padding: 12px 16px 28px; position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); }
 
-  /* Tabs */
-  .tabs { overflow-x: auto; flex-wrap: nowrap; gap: 0; }
-  .tab { white-space: nowrap; flex-shrink: 0; padding: 10px 14px; font-size: 13px; }
+  /* Modal drag handle */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 10px auto 0;
+  }
 
-  /* Buttons */
-  .btn { font-size: 13px; }
-  .btn-sm { padding: 7px 12px; font-size: 12px; }
+  /* ── TABS ────────────────────────────────────── */
+  .tabs { overflow-x: auto; flex-wrap: nowrap; gap: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; flex-shrink: 0; padding: 10px 16px; font-size: 13px; }
 
-  /* Score buttons */
-  .score-btns { flex-wrap: wrap; gap: 4px; }
-  .score-btn { width: 38px; height: 38px; }
+  /* ── BUTTONS ─────────────────────────────────── */
+  .btn { font-size: 13px; min-height: 40px; }
+  .btn-sm { padding: 8px 14px; font-size: 12px; min-height: 36px; }
+  .btn-xs { min-height: 28px; }
 
-  /* Req rows */
+  /* ── SCORE BUTTONS ───────────────────────────── */
+  .score-btns { gap: 8px; }
+  .score-btn { width: 44px; height: 44px; font-size: 16px; }
+
+  /* ── FORMS ───────────────────────────────────── */
+  input, textarea, select { font-size: 16px !important; } /* prevents iOS zoom */
+  .field { margin-bottom: 14px; }
+
+  /* ── REQ ROWS ────────────────────────────────── */
   .req-row { flex-wrap: wrap; gap: 6px; }
 
-  /* Hide non-essential columns */
+  /* ── MISC ────────────────────────────────────── */
   .hide-mobile { display: none !important; }
-
-  /* Pipeline horizontal scroll */
   .pipeline { overflow-x: auto; }
+  .flex { flex-wrap: wrap; }
+  .share-code-box { flex-direction: column; gap: 8px; }
+  .share-code { font-size: 11px; word-break: break-all; }
 
-  /* Auth */
+  /* ── AUTH ────────────────────────────────────── */
   .auth-bg { align-items: flex-end; padding: 0; }
   .auth-card {
     border-radius: 20px 20px 0 0;
     padding: 28px 20px 36px;
+    width: 100%; max-width: 100%;
+  }
+
+  /* ── EXTERNAL SCORECARD ──────────────────────── */
+  .external-bg { padding: 0; align-items: flex-end; }
+  .external-card {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
     width: 100%;
     max-width: 100%;
+    padding: 20px 16px 32px;
+  }
+  .external-card::before {
+    content: '';
+    display: block;
+    width: 40px; height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    margin: 0 auto 16px;
   }
 }
+
+/* Hide mobile-only elements on desktop */
+.mobile-nav { display: none; }
+.mobile-topbar { display: none; }
+.candidate-cards { display: none; }
 
 /* ── DESKTOP ENHANCEMENTS ────────────────────── */
 @media (min-width: 1200px) {
@@ -1818,6 +1870,44 @@ function CandidatesView({ candidates, setCandidates, positions, initialFilter, o
             </table></div>
           </div>
       }
+
+      {/* Mobile candidate cards (hidden on desktop via CSS) */}
+      <div className="candidate-cards">
+        {filtered.map(function(c){
+          var pos = positions.find(function(p){return p.id===c.positionId;});
+          var score = pos && c.scores ? calcWeightedScore(c.scores, pos.requirements||[]) : null;
+          var liUrl = c.linkedIn ? (c.linkedIn.startsWith('http') ? c.linkedIn : 'https://' + c.linkedIn) : null;
+          var scoreCol = score===-1?'#f75c5c':score>=80?'#2dd4a0':score>=60?'#4f8ef7':score?'#f7c94f':'var(--muted)';
+          return (
+            <div key={c.id} className="candidate-card" onClick={function(){setViewingProfile(c);}}>
+              <div className="candidate-card-header">
+                <div>
+                  <div className="candidate-card-name">{c.name}</div>
+                  <div className="candidate-card-meta">{pos?pos.title:'No position'}</div>
+                </div>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:4}}>
+                  <span className={'badge '+(STAGE_COLORS[c.stage]||'badge-gray')} style={{fontSize:11}}>{c.stage}</span>
+                  {score!=null&&score!==-1&&<span style={{fontSize:11,fontWeight:700,color:scoreCol}}>{score}%</span>}
+                  {score===-1&&<span style={{fontSize:10,color:'#f75c5c',fontWeight:700}}>DQ</span>}
+                </div>
+              </div>
+              {(liUrl||(c.interviewNotes&&c.interviewNotes.length>0)) && (
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+                  {liUrl&&<a href={liUrl} target="_blank" rel="noopener noreferrer" onClick={function(e){e.stopPropagation();}} style={{fontSize:11,color:'#0a66c2',fontWeight:600,textDecoration:'none',background:'rgba(10,102,194,.1)',padding:'3px 8px',borderRadius:4}}>💼 LinkedIn</a>}
+                  {(c.interviewNotes&&c.interviewNotes.length>0)&&<span style={{fontSize:11,color:'var(--accent)',background:'rgba(79,142,247,.08)',padding:'3px 8px',borderRadius:4,fontWeight:600}}>🎙️ {c.interviewNotes.length} notes</span>}
+                </div>
+              )}
+              <div className="candidate-card-actions" onClick={function(e){e.stopPropagation();}}>
+                <button className="btn btn-green btn-sm" style={{fontWeight:700}} onClick={function(){openEdit(c);}}>✏️ Edit</button>
+                <button className="btn btn-secondary btn-sm" onClick={function(){setFilterInterviewCand(c.id);setView('interviews');}}>🎙️ Notes</button>
+                <button className="btn btn-secondary btn-sm" onClick={function(){setView('scorecards');}}>⭐ Score</button>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length===0&&<div className="empty-state"><div className="empty-icon">👤</div><div className="empty-title">No candidates found</div></div>}
+      </div>
+
       {showExport && (
         <CandidateExportModal
           candidates={filtered}
@@ -4916,10 +5006,43 @@ function App() {
           </div>
         </div>
       </div>
-      <div className="main">
+      {/* Mobile top bar */}
+      <div className="mobile-topbar">
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{fontWeight:700,fontSize:16,color:'var(--accent)'}}>HCC</div>
+          <div style={{fontSize:10,color:'var(--muted)'}}>{org?.name||''}</div>
+          {syncStatus==='syncing'&&<span style={{fontSize:10,color:'var(--yellow)'}}>⏳</span>}
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <div className="user-avatar" style={{width:32,height:32,fontSize:12,cursor:'pointer'}} onClick={()=>setShowProfile(true)}>{initials}</div>
+        </div>
+      </div>
 
+      <div className="main">
         {renderView()}
       </div>
+
+      {/* Mobile bottom nav */}
+      <nav className="mobile-nav">
+        {[
+          {id:'dashboard',icon:'🏠',label:'Home'},
+          {id:'candidates',icon:'👤',label:'People'},
+          {id:'scorecards',icon:'⭐',label:'Scores'},
+          {id:'interviews',icon:'🎙️',label:'Notes'},
+          {id:'team',icon:'🔗',label:'Team'},
+          {id:'positions',icon:'📋',label:'Jobs'},
+          {id:'invite',icon:'✉️',label:'Invite'},
+        ].map(function(n){
+          return (
+            <button key={n.id}
+              className={'mobile-nav-item' + (view===n.id?' active':'')}
+              onClick={function(){setView(n.id);}}>
+              <span className="nav-icon">{n.icon}</span>
+              {n.label}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
