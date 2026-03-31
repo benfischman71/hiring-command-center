@@ -2453,10 +2453,56 @@ function ScorecardsView({ candidates, setCandidates, positions }) {
 
         <div className="flex justify-between items-center mb-2">
           <div className="text-muted text-xs">Scores save automatically as you click</div>
-          <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Reset all scores for '+cand.name+'?'))setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,scores:{},recommendation:'',overallNotes:''}:c))}}>
+          <button className="btn btn-danger btn-sm" onClick={()=>{if(window.confirm('Reset all scores for '+cand.name+'?'))setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,scores:{},valueScores:{},recommendation:'',overallNotes:''}:c))}}>
             ↺ Reset Scores
           </button>
         </div>
+
+        {/* Company Values Alignment */}
+        <div className="card mt-4 mb-4">
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+            <div>
+              <div className="section-title" style={{margin:0}}>Trade Values Alignment</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginTop:3}}>Rate how well this candidate demonstrates each core value</div>
+            </div>
+            {(()=>{
+              var vs = cand.valueScores||{};
+              var vals = ['connection','customer','impact','challenge','constraints'];
+              var scored = vals.filter(function(v){return vs[v];});
+              if (!scored.length) return null;
+              var avg = Math.round(scored.reduce(function(s,v){return s+vs[v];},0)/scored.length*20);
+              var col = avg>=80?'var(--accent3)':avg>=60?'var(--accent)':'var(--yellow)';
+              return <div style={{textAlign:'right'}}><div style={{fontSize:10,color:'var(--muted)',marginBottom:2}}>Values Score</div><div style={{fontSize:22,fontWeight:700,color:col}}>{avg}%</div></div>;
+            })()}
+          </div>
+          {[
+            {id:'connection', label:'Invest in Connection', desc:'Builds real relationships, leads with empathy, shows up authentically, is kind and genuine with teammates, roasters, and customers.'},
+            {id:'customer', label:'Customer First', desc:'Brings the customer into every decision. Goes beyond data to truly understand who they serve and adjusts goals when they conflict with what is right for the customer.'},
+            {id:'impact', label:'Chart the Most Impactful Path', desc:'Sets ambitious goals, holds themselves accountable to real outcomes. Spots opportunities, takes initiative, drives results — not busy work.'},
+            {id:'challenge', label:'Challenge Ideas, Not People', desc:'Debates openly, assumes positive intent, trusts others judgment. Once a decision is made, commits fully and moves forward as one team.'},
+            {id:'constraints', label:'Use Constraints as Catalysts', desc:'Takes smart risks, owns mistakes, finds creative workarounds. Operates with low ego, asks for help, keeps momentum over being right.'}
+          ].map(function(val){
+            var score = (cand.valueScores||{})[val.id];
+            var setValueScore = function(v) {
+              setCandidates(cs=>cs.map(c=>c.id===selCand?{...c,valueScores:{...(c.valueScores||{}),[val.id]:v}}:c));
+            };
+            return (
+              <div key={val.id} style={{marginBottom:16,paddingBottom:16,borderBottom:'1px solid var(--border)'}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,marginBottom:8}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,fontSize:13,marginBottom:3}}>{val.label}</div>
+                    <div style={{fontSize:11,color:'var(--muted)',lineHeight:1.5}}>{val.desc}</div>
+                  </div>
+                  <div style={{flexShrink:0}}>
+                    <ScoreBtns value={score} onChange={setValueScore}/>
+                    {score && <div style={{fontSize:10,color:'var(--muted)',marginTop:3,textAlign:'center'}}>{scoreLabel(score)}</div>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="card mt-4">
           <div className="section-title">Overall Recommendation</div>
           <div className="flex gap-2 mb-3" style={{flexWrap:'wrap'}}>
