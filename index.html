@@ -4048,6 +4048,140 @@ function ComparisonView({ candidates, positions }) {
    TEAM SCORING (Interviewer Portal)
    ═══════════════════════════════════════ */
 
+function IndividualScorecardModal({ scoreData, pos, cand, onClose, onDelete, onSave }) {
+  var VALUES = [{id:'connection',label:'Invest in Connection'},{id:'customer',label:'Customer First'},{id:'impact',label:'Chart the Most Impactful Path'},{id:'challenge',label:'Challenge Ideas, Not People'},{id:'constraints',label:'Use Constraints as Catalysts'}];
+  var activeReqs = (pos&&pos.requirements||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
+  var [editing, setEditing] = React.useState(false);
+  var [draft, setDraft] = React.useState(JSON.parse(JSON.stringify(scoreData)));
+  var scoreColor = function(s){ return s>=4?'#2dd4a0':s===3?'#f7c94f':s<=2?'#f75c5c':'var(--surface3)'; };
+  var recColor = function(r){ return r&&r.includes('Yes')?'badge-green':r==='Maybe'?'badge-yellow':r&&r.includes('No')?'badge-red':'badge-gray'; };
+
+  var isDQ = activeReqs.some(function(req){ return req.mustHave&&draft.scores&&draft.scores[req.id]&&draft.scores[req.id].score===1; });
+
+  var setScore = function(reqId, val) {
+    setDraft(function(d){ return {...d, scores:{...d.scores,[reqId]:{...(d.scores&&d.scores[reqId]||{}),score:val}}}; });
+  };
+  var setValScore = function(valId, val) {
+    setDraft(function(d){ return {...d, valueScores:{...(d.valueScores||{}),[valId]:val}}; });
+  };
+
+  return (
+    <div className="modal-overlay" onClick={function(e){e.target===e.currentTarget&&onClose();}}>
+      <div className="modal" style={{maxWidth:600,maxHeight:'90vh',display:'flex',flexDirection:'column'}}>
+        <div className="modal-header" style={{flexShrink:0}}>
+          <div>
+            <div className="modal-title">{draft.evaluatorName} — Scorecard</div>
+            <div style={{fontSize:12,color:'var(--muted)',marginTop:2}}>
+              {cand.name} · {pos&&pos.title}
+              {draft.submittedAt&&<span> · Submitted {fmtDate(draft.submittedAt)}</span>}
+            </div>
+          </div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body" style={{overflowY:'auto',flex:1}}>
+
+          {/* Status bar */}
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:16,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid '+(isDQ?'#f75c5c':'var(--border)')}}>
+            {isDQ
+              ? <span className="badge badge-red">⛔ Do Not Hire — Must Have failed</span>
+              : draft.recommendation
+                ? <span className={'badge '+recColor(draft.recommendation)}>{draft.recommendation}</span>
+                : <span style={{fontSize:12,color:'var(--muted)'}}>No recommendation set</span>
+            }
+            {editing && (
+              <div style={{marginLeft:'auto',display:'flex',gap:4,flexWrap:'wrap'}}>
+                {['Strong Yes','Yes','Maybe','No','Strong No'].map(function(r){
+                  return <button key={r} className={'btn btn-xs '+(draft.recommendation===r?'btn-primary':'btn-secondary')} onClick={function(){setDraft(function(d){return {...d,recommendation:r};});}}>{r}</button>;
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Requirements */}
+          {activeReqs.length > 0 && (
+            <div style={{marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Requirements</div>
+              {activeReqs.map(function(req){
+                var s = draft.scores&&draft.scores[req.id]?draft.scores[req.id].score:null;
+                var note = draft.scores&&draft.scores[req.id]?draft.scores[req.id].note||'':'';
+                var isDQReq = req.mustHave&&s===1;
+                return (
+                  <div key={req.id} style={{marginBottom:10,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid '+(isDQReq?'#f75c5c':'var(--border)')}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
+                      <div style={{flex:1,fontWeight:500,fontSize:13}}>{req.name}</div>
+                      <div style={{display:'flex',gap:4,fontSize:10}}>
+                        {req.mustHave&&<span style={{color:'#f75c5c',fontWeight:700}}>Must Have</span>}
+                        {(req.weight||1)>1&&<span style={{color:req.weight===3?'var(--accent2)':'var(--accent)',fontWeight:700}}>{req.weight}×</span>}
+                      </div>
+                    </div>
+                    {editing
+                      ? <ScoreBtns value={s} onChange={function(v){setScore(req.id,v);}}/>
+                      : <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                          {s!=null?<div style={{width:32,height:32,borderRadius:6,background:isDQReq?'#f75c5c':scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14,color:'#fff'}}>{s}</div>
+                            :<span style={{color:'var(--muted)',fontSize:12}}>Not scored</span>}
+                          {s&&<span style={{fontSize:11,color:'var(--muted)'}}>{scoreLabel(s)}</span>}
+                        </div>
+                    }
+                    {note&&!editing&&<div style={{fontSize:11,color:'var(--muted)',marginTop:6,fontStyle:'italic'}}>"{note}"</div>}
+                    {editing&&<input style={{fontSize:12,marginTop:6,padding:'4px 8px'}} placeholder="Note (optional)..." value={note} onChange={function(e){setDraft(function(d){return {...d,scores:{...d.scores,[req.id]:{...(d.scores&&d.scores[req.id]||{}),note:e.target.value}}};});}}/>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Values */}
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Values Alignment</div>
+            {VALUES.map(function(val){
+              var s = draft.valueScores&&draft.valueScores[val.id]?draft.valueScores[val.id]:null;
+              return (
+                <div key={val.id} style={{marginBottom:8,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)'}}>
+                  <div style={{fontWeight:500,fontSize:13,marginBottom:8}}>{val.label}</div>
+                  {editing
+                    ? <ScoreBtns value={s} onChange={function(v){setValScore(val.id,v);}}/>
+                    : <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                        {s!=null?<div style={{width:32,height:32,borderRadius:6,background:scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:14,color:'#fff'}}>{s}</div>
+                          :<span style={{color:'var(--muted)',fontSize:12}}>Not scored</span>}
+                        {s&&<span style={{fontSize:11,color:'var(--muted)'}}>{scoreLabel(s)}</span>}
+                      </div>
+                  }
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Overall notes */}
+          <div style={{marginBottom:8}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:6}}>Overall Notes</div>
+            {editing
+              ? <textarea value={draft.notes||''} onChange={function(e){setDraft(function(d){return {...d,notes:e.target.value};});}} placeholder="Overall impression..." style={{minHeight:80}}/>
+              : <div style={{fontSize:13,color:'var(--text2)',lineHeight:1.6}}>{draft.notes||<span style={{color:'var(--muted)',fontStyle:'italic'}}>No notes.</span>}</div>
+            }
+          </div>
+        </div>
+
+        <div className="modal-footer" style={{display:'flex',gap:8,justifyContent:'space-between',flexShrink:0}}>
+          <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑 Delete</button>
+          <div style={{display:'flex',gap:8}}>
+            {editing
+              ? <>
+                  <button className="btn btn-ghost btn-sm" onClick={function(){setDraft(JSON.parse(JSON.stringify(scoreData)));setEditing(false);}}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" onClick={function(){onSave(draft);}}>Save Changes</button>
+                </>
+              : <>
+                  <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
+                  <button className="btn btn-secondary btn-sm" onClick={function(){setEditing(true);}}>✏️ Edit</button>
+                </>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function CombinedScorecardModal({ cand, pos, teamScores, user, onClose }) {
   var VALUES = [{id:'connection',label:'Connection'},{id:'customer',label:'Customer'},{id:'impact',label:'Impact'},{id:'challenge',label:'Challenge'},{id:'constraints',label:'Constraints'}];
   var activeReqs = ((pos&&pos.requirements)||[]).filter(function(r){return r.active!==false;}).sort(function(a,b){if(a.mustHave&&!b.mustHave)return -1;if(!a.mustHave&&b.mustHave)return 1;return (b.weight||1)-(a.weight||1);});
@@ -4250,7 +4384,7 @@ function TeamScoringView({ positions, candidates, setCandidates, user }) {
   const [teamScores, setTeamScores] = useState([]);
   const [loadingScores, setLoadingScores] = useState(false);
   const [showCombined, setShowCombined] = useState(false);
-  const [editingScore, setEditingScore] = useState(null); // index of score being edited
+  const [viewingScore, setViewingScore] = useState(null); // {score, idx} being viewed/edited
 
   const pos = positions.find(p=>p.id===selPos);
   const cand = candidates.find(c=>c.id===selCand);
@@ -4367,7 +4501,7 @@ function TeamScoringView({ positions, candidates, setCandidates, user }) {
                       </div>
                       <div style={{display:'flex',gap:6}}>
                         {submitted
-                          ? <button className="btn btn-secondary btn-xs" onClick={function(){setShowCombined(true);}}>👁 View</button>
+                          ? <button className="btn btn-secondary btn-xs" onClick={function(){setViewingScore({score:submitted,idx:teamScores.indexOf(submitted)});}}>👁 View</button>
                           : <>
                               <button className="btn btn-secondary btn-xs" onClick={function(){navigator.clipboard.writeText(ivLink);setCopied(iv.id);setTimeout(function(){setCopied(false);},2000);}}>{copied===iv.id?'✓':'📋 Copy'}</button>
                               <button className="btn btn-primary btn-xs" onClick={sendScorecardEmail}>📧 Email</button>
@@ -4504,153 +4638,11 @@ function TeamScoringView({ positions, candidates, setCandidates, user }) {
                       })}
                     </div>
 
-                    {/* Combined requirements table */}
-                    {activeReqs.length > 0 && (
-                      <div style={{overflowX:'auto',marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Requirements</div>
-                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:400}}>
-                          <thead>
-                            <tr style={{borderBottom:'2px solid var(--border)',background:'var(--surface3)'}}>
-                              <th style={{textAlign:'left',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',minWidth:180}}>Requirement</th>
-                              <th style={{textAlign:'center',padding:'8px 6px',fontWeight:700,fontSize:11,color:'var(--muted)',minWidth:40}}>Wt</th>
-                              {allScores.map(function(ts,i){
-                                return <th key={i} style={{textAlign:'center',padding:'8px 8px',fontWeight:700,fontSize:11,color:ts.isOwner?'var(--accent)':'var(--muted)',minWidth:70}}>{ts.evaluatorName.split(' ')[0]}{ts.isOwner?' ★':''}</th>;
-                              })}
-                              <th style={{textAlign:'center',padding:'8px 8px',fontWeight:700,fontSize:11,color:'var(--muted)',minWidth:60}}>Avg</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {activeReqs.map(function(req){
-                              var reqScores = allScores.map(function(ts){ return ts.scores&&ts.scores[req.id]?ts.scores[req.id].score:null; });
-                              var validScores = reqScores.filter(function(s){return s!=null;});
-                              var avg = validScores.length ? (validScores.reduce(function(a,b){return a+b;},0)/validScores.length) : null;
-                              var anyDQ = req.mustHave && reqScores.some(function(s){return s===1;});
-                              return (
-                                <tr key={req.id} style={{borderBottom:'1px solid var(--border)',background:anyDQ?'rgba(247,92,92,.05)':''}}>
-                                  <td style={{padding:'8px 10px'}}>
-                                    <div style={{fontWeight:500,fontSize:12}}>{req.name}</div>
-                                    <div style={{fontSize:10,color:'var(--muted)',display:'flex',gap:4,marginTop:1}}>
-                                      {req.mustHave&&<span style={{color:'#f75c5c',fontWeight:700}}>Must Have</span>}
-                                      {anyDQ&&<span style={{color:'#f75c5c',fontWeight:700}}>⛔ DQ trigger</span>}
-                                    </div>
-                                  </td>
-                                  <td style={{textAlign:'center',padding:'8px 6px',fontSize:11,color:'var(--muted)',fontWeight:600}}>{req.weight||1}×</td>
-                                  {reqScores.map(function(s,i){
-                                    var note = allScores[i].scores&&allScores[i].scores[req.id]?allScores[i].scores[req.id].note:'';
-                                    var isDQScore = req.mustHave&&s===1;
-                                    return (
-                                      <td key={i} style={{textAlign:'center',padding:'8px 4px'}} title={note||''}>
-                                        {s!=null ? <div style={{width:28,height:28,borderRadius:6,background:isDQScore?'#f75c5c':scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,color:'#fff',margin:'auto',outline:isDQScore?'2px solid #f75c5c':''}}>{s}</div>
-                                          : <span style={{color:'var(--muted)',fontSize:11}}>—</span>}
-                                        {note&&<div style={{fontSize:9,color:'var(--muted)',textAlign:'center'}}>💬</div>}
-                                      </td>
-                                    );
-                                  })}
-                                  <td style={{textAlign:'center',padding:'8px 4px'}}>
-                                    {avg!=null?<div style={{fontWeight:700,fontSize:13,color:scoreColor(Math.round(avg))}}>{avg.toFixed(1)}</div>:<span style={{color:'var(--muted)',fontSize:11}}>—</span>}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                            {/* Req total row */}
-                            <tr style={{borderTop:'2px solid var(--border)',background:'var(--surface3)'}}>
-                              <td style={{padding:'8px 10px',fontWeight:700,fontSize:12}}>Requirements Total</td>
-                              <td/>
-                              {allScores.map(function(ts,i){
-                                var tot=0,max=0;
-                                activeReqs.forEach(function(req){var s=ts.scores&&ts.scores[req.id]?ts.scores[req.id].score:null;if(s){var w=req.weight||1;tot+=s*w;max+=5*w;}});
-                                return <td key={i} style={{textAlign:'center',padding:'8px 4px',fontWeight:700,fontSize:13,color:max>0?scoreColor(Math.round(tot/max*5)):'var(--muted)'}}>{max>0?(tot+'/'+max):('—')}</td>;
-                              })}
-                              {(function(){
-                                var allTots=[]; var allMaxes=[];
-                                allScores.forEach(function(ts){var tot=0,max=0;activeReqs.forEach(function(req){var s=ts.scores&&ts.scores[req.id]?ts.scores[req.id].score:null;if(s){var w=req.weight||1;tot+=s*w;max+=5*w;}});if(max>0){allTots.push(tot);allMaxes.push(max);}});
-                                var avgPct = allMaxes.length ? Math.round(allTots.reduce(function(a,b){return a+b;},0)/allMaxes.reduce(function(a,b){return a+b;},0)*100) : null;
-                                return <td style={{textAlign:'center',padding:'8px 4px',fontWeight:700,color:avgPct>=70?'#2dd4a0':avgPct>=50?'#f7c94f':'#f75c5c'}}>{avgPct!=null?avgPct+'%':'—'}</td>;
-                              })()}
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* Values table */}
-                    {allScores.some(function(ts){return ts.valueScores&&Object.keys(ts.valueScores).length>0;}) && (
-                      <div style={{overflowX:'auto',marginBottom:16}}>
-                        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Values Alignment <span style={{fontWeight:400,textTransform:'none',fontSize:10}}>(1× each)</span></div>
-                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,minWidth:400}}>
-                          <thead>
-                            <tr style={{borderBottom:'2px solid var(--border)',background:'var(--surface3)'}}>
-                              <th style={{textAlign:'left',padding:'8px 10px',fontWeight:700,fontSize:11,color:'var(--muted)',minWidth:180}}>Value</th>
-                              {allScores.map(function(ts,i){return <th key={i} style={{textAlign:'center',padding:'8px 8px',fontWeight:700,fontSize:11,color:ts.isOwner?'var(--accent)':'var(--muted)',minWidth:70}}>{ts.evaluatorName.split(' ')[0]}{ts.isOwner?' ★':''}</th>;})}
-                              <th style={{textAlign:'center',padding:'8px 8px',fontWeight:700,fontSize:11,color:'var(--muted)',minWidth:60}}>Avg</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {VALUES.map(function(val){
-                              var valScores = allScores.map(function(ts){ return ts.valueScores&&ts.valueScores[val.id]?ts.valueScores[val.id]:null; });
-                              var valid = valScores.filter(function(s){return s!=null;});
-                              var avg = valid.length?(valid.reduce(function(a,b){return a+b;},0)/valid.length):null;
-                              return (
-                                <tr key={val.id} style={{borderBottom:'1px solid var(--border)'}}>
-                                  <td style={{padding:'8px 10px',fontWeight:500,fontSize:12}}>{val.label}</td>
-                                  {valScores.map(function(s,i){
-                                    return <td key={i} style={{textAlign:'center',padding:'8px 4px'}}>
-                                      {s!=null?<div style={{width:28,height:28,borderRadius:6,background:scoreColor(s),display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:13,color:'#fff',margin:'auto'}}>{s}</div>
-                                        :<span style={{color:'var(--muted)',fontSize:11}}>—</span>}
-                                    </td>;
-                                  })}
-                                  <td style={{textAlign:'center',padding:'8px 4px'}}>{avg!=null?<div style={{fontWeight:700,fontSize:13,color:scoreColor(Math.round(avg))}}>{avg.toFixed(1)}</div>:<span style={{color:'var(--muted)',fontSize:11}}>—</span>}</td>
-                                </tr>
-                              );
-                            })}
-                            {/* Values total row */}
-                            <tr style={{borderTop:'2px solid var(--border)',background:'var(--surface3)'}}>
-                              <td style={{padding:'8px 10px',fontWeight:700,fontSize:12}}>Values Total</td>
-                              {allScores.map(function(ts,i){
-                                var tot=0,cnt=0;
-                                VALUES.forEach(function(v){var s=ts.valueScores&&ts.valueScores[v.id];if(s){tot+=s;cnt++;}});
-                                return <td key={i} style={{textAlign:'center',padding:'8px 4px',fontWeight:700,fontSize:13,color:cnt>0?scoreColor(Math.round(tot/cnt)):'var(--muted)'}}>{cnt>0?(tot+'/'+(cnt*5)):('—')}</td>;
-                              })}
-                              {(function(){
-                                var tots=[]; allScores.forEach(function(ts){var tot=0,cnt=0;VALUES.forEach(function(v){var s=ts.valueScores&&ts.valueScores[v.id];if(s){tot+=s;cnt++;}});if(cnt>0)tots.push(tot/(cnt*5));});
-                                var avg=tots.length?Math.round(tots.reduce(function(a,b){return a+b;},0)/tots.length*100):null;
-                                return <td style={{textAlign:'center',padding:'8px 4px',fontWeight:700,color:avg>=70?'#2dd4a0':avg>=50?'#f7c94f':'#f75c5c'}}>{avg!=null?avg+'%':'—'}</td>;
-                              })()}
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* Combined total row */}
-                    <div style={{background:'var(--surface2)',border:'1px solid var(--border)',borderRadius:8,padding:'12px 14px',marginBottom:16,display:'flex',gap:12,flexWrap:'wrap',alignItems:'center'}}>
-                      <div style={{fontWeight:700,fontSize:13,flex:1}}>Combined Score</div>
-                      {allScores.map(function(ts,i){
-                        var t=computeTotal(ts);
-                        var dq=isDQ(ts);
-                        return <div key={i} style={{textAlign:'center',minWidth:70}}>
-                          <div style={{fontSize:11,color:'var(--muted)',marginBottom:2}}>{ts.evaluatorName.split(' ')[0]}</div>
-                          {dq?<div style={{fontWeight:700,fontSize:13,color:'#f75c5c'}}>DQ</div>
-                            :t?<div style={{fontWeight:700,fontSize:16,color:t.pct>=70?'#2dd4a0':t.pct>=50?'#f7c94f':'#f75c5c'}}>{t.pct}%</div>
-                            :<div style={{color:'var(--muted)'}}>—</div>}
-                        </div>;
-                      })}
+                    <div style={{marginTop:4,textAlign:'center'}}>
+                      <button className="btn btn-secondary btn-sm" onClick={function(){setShowCombined(true);}}>
+                        📊 View Full Combined Scorecard
+                      </button>
                     </div>
-
-                    {/* Notes */}
-                    {allScores.some(function(ts){return ts.notes;}) && (
-                      <div style={{marginTop:8}}>
-                        <div style={{fontSize:11,fontWeight:700,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.07em',marginBottom:8}}>Overall Notes</div>
-                        {allScores.filter(function(ts){return ts.notes;}).map(function(ts,i){
-                          return (
-                            <div key={i} style={{marginBottom:8,padding:'10px 12px',background:'var(--surface2)',borderRadius:8,border:'1px solid var(--border)'}}>
-                              <div style={{fontWeight:600,fontSize:12,marginBottom:4}}>{ts.evaluatorName}</div>
-                              <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.6}}>{ts.notes}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
               })()
@@ -4667,6 +4659,42 @@ function TeamScoringView({ positions, candidates, setCandidates, user }) {
           teamScores={teamScores}
           user={user}
           onClose={function(){setShowCombined(false);}}
+        />
+      )}
+      {viewingScore && cand && pos && (
+        <IndividualScorecardModal
+          scoreData={viewingScore.score}
+          pos={pos}
+          cand={cand}
+          onClose={function(){setViewingScore(null);}}
+          onDelete={function(){
+            if(!window.confirm('Delete this submission?')) return;
+            if(!DEMO_MODE && supabase) {
+              var name = viewingScore.score.evaluatorName;
+              supabase.from('team_scores').delete().eq('candidate_id',selCand).eq('evaluator_name',name).then(function(){
+                setTeamScores(function(ts){return ts.filter(function(t){return t.evaluatorName!==name;});});
+              });
+            } else {
+              setTeamScores(function(ts){return ts.filter(function(t,i){return i!==viewingScore.idx;});});
+            }
+            setViewingScore(null);
+          }}
+          onSave={function(updated){
+            if(!DEMO_MODE && supabase) {
+              var name = viewingScore.score.evaluatorName;
+              supabase.from('team_scores').update({
+                scores: updated.scores,
+                value_scores: updated.valueScores,
+                recommendation: updated.recommendation,
+                notes: updated.notes
+              }).eq('candidate_id',selCand).eq('evaluator_name',name).then(function(){
+                setTeamScores(function(ts){return ts.map(function(t){return t.evaluatorName===name?updated:t;});});
+              });
+            } else {
+              setTeamScores(function(ts){return ts.map(function(t,i){return i===viewingScore.idx?updated:t;});});
+            }
+            setViewingScore(null);
+          }}
         />
       )}
     </div>
