@@ -4681,8 +4681,13 @@ function TeamScoringView({ positions, candidates, setCandidates, user }) {
                 value_scores: updated.valueScores,
                 recommendation: updated.recommendation,
                 notes: updated.notes
-              }).eq('candidate_id',selCand).eq('evaluator_name',name).then(function(){
-                setTeamScores(function(ts){return ts.map(function(t){return t.evaluatorName===name?updated:t;});});
+              }).eq('candidate_id',selCand).eq('evaluator_name',name).then(function(result){
+                if(result.error) {
+                  console.error('Save error:', result.error);
+                  alert('Could not save: ' + result.error.message + '. You may need to add an UPDATE policy to the team_scores table in Supabase.');
+                } else {
+                  setTeamScores(function(ts){return ts.map(function(t){return t.evaluatorName===name?updated:t;});});
+                }
               });
             } else {
               setTeamScores(function(ts){return ts.map(function(t,i){return i===viewingScore.idx?updated:t;});});
